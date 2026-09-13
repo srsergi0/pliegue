@@ -18,6 +18,57 @@ function sanitizeFileName(name: string): string {
   return basename(name).replace(/[[/\\]]/g, '_') || 'pliegue.pdf';
 }
 
+function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
+  let timer: ReturnType<typeof setTimeout>;
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new Error('timeout')), ms);
+  });
+  return Promise.race([p, timeout]).finally(() => clearTimeout(timer));
+}
+
+/** Diálogo abrir-PDF con reintentos (el filtro/carpeta pueden colgar el nativo). */
+async function pickPdfRobust(): Promise<string | null> {
+  const tries = [
+    {
+      startingFolder: Utils.paths.documents,
+      allowedFileTypes: 'pdf',
+    },
+    {
+      startingFolder: Utils.paths.home,
+      allowedFileTypes: '*',
+    },
+    {
+      startingFolder: '/',
+      allowedFileTypes: '*',
+    },
+  ];
+  for (const t of tries) {
+    try {
+      console.log(`[Pliegue] pickPdf: intento carpeta=${t.startingFolder} filtro=${t.allowedFileTypes}`);
+      const picked = await withTimeout(
+        Utils.openFileDialog({
+          ...t,
+          canChooseFiles: true,
+          canChooseDirectory: false,
+          allowsMultipleSelection: false,
+        }),
+        8000
+      );
+      console.log(`[Pliegue] pickPdf: diálogo devolvió ${picked.length} rutas`);
+      const path = picked[0];
+      if (!path) return null;
+      if (!/\.pdf$/i.test(path)) {
+        console.log('[Pliegue] pickPdf: no es PDF, reintentando sin filtro');
+        continue;
+      }
+      return path;
+    } catch (err) {
+      console.log(`[Pliegue] pickPdf: intento fallido (${(err as Error).message})`);
+    }
+  }
+  return null;
+}
+
 const rpc = defineElectrobunRPC<PliegueRPCSchema>('bun', {
   handlers: {
     requests: {
@@ -26,20 +77,7 @@ const rpc = defineElectrobunRPC<PliegueRPCSchema>('bun', {
         return `Pliegue main OK (bun ${Bun.version})`;
       },
 
-      pickPdf: async () => {
-        console.log('[Pliegue] pickPdf: abriendo diálogo...');
-        const picked = await Utils.openFileDialog({
-          startingFolder: Utils.paths.documents,
-          allowedFileTypes: 'pdf',
-          canChooseFiles: true,
-          canChooseDirectory: false,
-          allowsMultipleSelection: false,
-        });
-        console.log(`[Pliegue] pickPdf: diálogo devolvió ${picked.length} rutas`);
-        const path = picked[0];
-        if (!path || !/\.pdf$/i.test(path)) return null;
-        return path;
-      },
+      pickPdf: async () => await pickPdfRobust(),
 
       readPdf: async ({ path }: { path: string }) => {
         try {
