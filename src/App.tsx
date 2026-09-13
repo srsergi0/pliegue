@@ -29,6 +29,7 @@ import {
   desktopOpenPath,
   desktopShowInFolder,
   desktopToggleDevTools,
+  pingNative,
   applyZoom,
   getZoom,
 } from './desktop';
@@ -78,6 +79,8 @@ export default function App() {
   const [savedFilePath, setSavedFilePath] = useState<string | null>(null);
   const [isTemplatesOpen, setIsTemplatesOpen] = useState(false);
   const [toastMsg, setToastMsg] = useState<string | null>(null);
+  // Si el RPC nativo no responde, se usan los selectores web automáticamente
+  const [nativeBroken, setNativeBroken] = useState(false);
 
   const hiddenFileInputRef = useRef<HTMLInputElement>(null);
 
@@ -91,7 +94,7 @@ export default function App() {
   };
 
   const handleOpenAnotherFile = () => {
-    if (isDesktop) {
+    if (isDesktop && !nativeBroken) {
       handleOpenNativeDialog();
     } else {
       hiddenFileInputRef.current?.click();
@@ -153,7 +156,8 @@ export default function App() {
     }
   };
 
-  // Diálogo nativo (Electron o Electrobun) para abrir archivo
+  // Diálogo nativo (Electron o Electrobun) para abrir archivo.
+  // Si falla, se recurre al selector web para que siempre se abra algo.
   const handleOpenNativeDialog = async () => {
     try {
       const res = await desktopOpenPDF();
@@ -162,8 +166,27 @@ export default function App() {
       }
     } catch (err) {
       console.error('Error al abrir diálogo nativo:', err);
+      setNativeBroken(true);
+      setErrorMsg(
+        'No se pudo abrir el explorador nativo, usando el selector web.'
+      );
+      hiddenFileInputRef.current?.click();
     }
   };
+
+  // Al arrancar en Electrobun: comprobar el RPC una sola vez
+  useEffect(() => {
+    if (!isElectrobun) return;
+    pingNative().then((ok) => {
+      if (!ok) {
+        setNativeBroken(true);
+        setErrorMsg(
+          'Sin conexión con el proceso nativo: se usarán los selectores web.'
+        );
+      }
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Handle local file uploads (fallback web)
   const handleFileUpload = async (e: ChangeEvent<HTMLInputElement>) => {
@@ -307,15 +330,7 @@ export default function App() {
       const cleanName = sourcePDFInfo.name.replace(/\.[^/.]+$/, "");
       const defaultFileName = `pliegue_${cleanName}_${settings.sheetPreset}.pdf`;
 
-      if (isDesktop) {
-        const result = await desktopSavePDF(defaultFileName, outputBytes);
-        if (!result.canceled && result.filePath) {
-          setSavedFilePath(result.filePath);
-        } else if (result.error) {
-          setErrorMsg(`Error al guardar: ${result.error}`);
-        }
-      } else {
-        // Fallback web
+      const downloadWeb = () => {
         const blob = new Blob([outputBytes], { type: 'application/pdf' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -325,6 +340,28 @@ export default function App() {
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
+        setToastMsg('✓ PDF descargado');
+        setTimeout(() => setToastMsg(null), 3500);
+      };
+
+      if (isDesktop && !nativeBroken) {
+        try {
+          const result = await desktopSavePDF(defaultFileName, outputBytes);
+          if (!result.canceled && result.filePath) {
+            setSavedFilePath(result.filePath);
+          } else if (result.error) {
+            setErrorMsg(`Error al guardar: ${result.error}`);
+          }
+        } catch (err) {
+          console.error('Error al guardar nativo, usando descarga web:', err);
+          setNativeBroken(true);
+          setErrorMsg(
+            'No se pudo guardar con el diálogo nativo, usando descarga web.'
+          );
+          downloadWeb();
+        }
+      } else {
+        downloadWeb();
       }
     } catch (err) {
       console.error('Error al exportar PDF:', err);

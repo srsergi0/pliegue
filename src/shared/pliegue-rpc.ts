@@ -8,6 +8,11 @@
 export type PliegueRPCSchema = {
   bun: {
     requests: {
+      /** Ping de diagnóstico. Devuelve identificación del main. */
+      ping: {
+        params: {};
+        response: string;
+      };
       /** Diálogo abrir PDF. Devuelve la ruta elegida o null si se cancela. */
       pickPdf: {
         params: {};

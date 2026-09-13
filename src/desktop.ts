@@ -58,15 +58,47 @@ function b64ToU8(b64: string): Uint8Array {
   return bytes;
 }
 
-/** Diálogo nativo para abrir un PDF. */
+function withTimeout<T>(p: Promise<T>, ms: number, label: string): Promise<T> {
+  let timer: ReturnType<typeof setTimeout>;
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new Error(`${label} (tiempo agotado)`)), ms);
+  });
+  return Promise.race([p, timeout]).finally(() => clearTimeout(timer));
+}
+
+/** Ping al proceso main. false si el RPC no responde (usar modo web). */
+export async function pingNative(timeoutMs = 5000): Promise<boolean> {
+  if (!isElectrobun) return false;
+  try {
+    const rpc = await withTimeout(getRpc(), timeoutMs, 'RPC no disponible');
+    const res = await withTimeout(
+      rpc.request('ping', {}),
+      timeoutMs,
+      'Sin respuesta del main'
+    );
+    return typeof res === 'string' && res.length > 0;
+  } catch {
+    return false;
+  }
+}
+
+/** Diálogo nativo para abrir un PDF. Lanza error si falla (para fallback). */
 export async function desktopOpenPDF(): Promise<OpenPDFResult> {
   if (isElectron && window.electronAPI) {
     return window.electronAPI.openPDFDialog();
   }
-  const rpc = await getRpc();
-  const path = await rpc.request('pickPdf', {});
+  const rpc = await withTimeout(getRpc(), 8000, 'RPC no disponible');
+  const path = await withTimeout(
+    rpc.request('pickPdf', {}),
+    60000,
+    'Diálogo sin respuesta'
+  );
   if (!path) return { canceled: true };
-  const file = await rpc.request('readPdf', { path });
+  const file = await withTimeout(
+    rpc.request('readPdf', { path }),
+    120000,
+    'Lectura sin respuesta'
+  );
   if (!file) return { canceled: true };
   const data = b64ToU8(file.dataB64);
   return { canceled: false, name: file.name, path, data };

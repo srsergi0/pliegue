@@ -21,9 +21,13 @@ function sanitizeFileName(name: string): string {
 const rpc = defineElectrobunRPC<PliegueRPCSchema>('bun', {
   handlers: {
     requests: {
+      ping: async () => {
+        return `Pliegue main OK (bun ${Bun.version})`;
+      },
+
       pickPdf: async () => {
         const picked = await Utils.openFileDialog({
-          startingFolder: '~/',
+          startingFolder: Utils.paths.documents,
           allowedFileTypes: 'pdf',
           canChooseFiles: true,
           canChooseDirectory: false,
@@ -60,7 +64,7 @@ const rpc = defineElectrobunRPC<PliegueRPCSchema>('bun', {
         // El SDK aún no expone diálogo "guardar como": se elige carpeta
         // y se escribe con el nombre sugerido.
         const picked = await Utils.openFileDialog({
-          startingFolder: '~/',
+          startingFolder: Utils.paths.documents,
           allowedFileTypes: '*',
           canChooseFiles: false,
           canChooseDirectory: true,
