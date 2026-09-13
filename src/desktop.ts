@@ -38,11 +38,11 @@ let electroviewPromise: Promise<RpcClient> | null = null;
 async function getRpc(): Promise<RpcClient> {
   if (!electroviewPromise) {
     electroviewPromise = (async () => {
-      const { Electroview, defineElectrobunRPC } = await import(
-        'electrobun/view'
-      );
-      const rpc = defineElectrobunRPC('webview', { handlers: {} });
-      const view = new Electroview({ rpc });
+      // OJO: no importar defineElectrobunRPC directo del SDK empaquetado
+      // (el re-export se pierde en el bundle); usar el estático de la clase.
+      const { Electroview } = await import('electrobun/view');
+      const rpc = Electroview.defineRPC({ handlers: {} });
+      new Electroview({ rpc });
       return rpc as unknown as RpcClient;
     })();
   }

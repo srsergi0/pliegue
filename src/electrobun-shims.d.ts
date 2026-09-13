@@ -97,5 +97,14 @@ declare module 'electrobun/view' {
 
   export class Electroview {
     constructor(config: { rpc: unknown });
+    static defineRPC(config: {
+      handlers?: {
+        requests?: Record<string, (params: never) => unknown>;
+        messages?: Record<string, (payload: never) => void>;
+      };
+      maxRequestTime?: number;
+    }): {
+      request<T = unknown>(method: string, params?: unknown): Promise<T>;
+    };
   }
 }
