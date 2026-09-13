@@ -26,47 +26,25 @@ function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
   return Promise.race([p, timeout]).finally(() => clearTimeout(timer));
 }
 
-/** Diálogo abrir-PDF con reintentos (el filtro/carpeta pueden colgar el nativo). */
+/** Diálogo abrir-PDF: un solo intento, bloqueo modal hasta que el usuario
+ *  elige o cancela (los reintentos apilarían diálogos nativos). */
 async function pickPdfRobust(): Promise<string | null> {
-  const tries = [
-    {
-      startingFolder: Utils.paths.documents,
-      allowedFileTypes: 'pdf',
-    },
-    {
-      startingFolder: Utils.paths.home,
-      allowedFileTypes: '*',
-    },
-    {
-      startingFolder: '/',
-      allowedFileTypes: '*',
-    },
-  ];
-  for (const t of tries) {
-    try {
-      console.log(`[Pliegue] pickPdf: intento carpeta=${t.startingFolder} filtro=${t.allowedFileTypes}`);
-      const picked = await withTimeout(
-        Utils.openFileDialog({
-          ...t,
-          canChooseFiles: true,
-          canChooseDirectory: false,
-          allowsMultipleSelection: false,
-        }),
-        8000
-      );
-      console.log(`[Pliegue] pickPdf: diálogo devolvió ${picked.length} rutas`);
-      const path = picked[0];
-      if (!path) return null;
-      if (!/\.pdf$/i.test(path)) {
-        console.log('[Pliegue] pickPdf: no es PDF, reintentando sin filtro');
-        continue;
-      }
-      return path;
-    } catch (err) {
-      console.log(`[Pliegue] pickPdf: intento fallido (${(err as Error).message})`);
-    }
+  console.log('[Pliegue] pickPdf: abriendo diálogo nativo...');
+  const picked = await Utils.openFileDialog({
+    startingFolder: Utils.paths.documents,
+    allowedFileTypes: 'pdf',
+    canChooseFiles: true,
+    canChooseDirectory: false,
+    allowsMultipleSelection: false,
+  });
+  console.log(`[Pliegue] pickPdf: diálogo devolvió ${picked.length} rutas`);
+  const path = picked[0];
+  if (!path) return null;
+  if (!/\.pdf$/i.test(path)) {
+    console.log('[Pliegue] pickPdf: no es PDF');
+    return null;
   }
-  return null;
+  return path;
 }
 
 const rpc = defineElectrobunRPC<PliegueRPCSchema>('bun', {
