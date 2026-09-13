@@ -1,4 +1,4 @@
-import { app, BrowserWindow, dialog, ipcMain, shell, Menu } from 'electron';
+import { app, BrowserWindow, dialog, ipcMain, shell, Menu, screen } from 'electron';
 import path from 'path';
 import fs from 'fs';
 
@@ -7,13 +7,23 @@ let mainWindow: BrowserWindow | null = null;
 const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged;
 
 function createWindow() {
+  // En Hyprland (tiling/Wayland) una ventana de tamaño fijo se abre flotante,
+  // descentrada o con parpadeo de redimensionado. Para que se vea bien y se
+  // acomode sola: tamaño limitado al área útil, arranque oculto y mostrar
+  // ya colocada cuando el contenido está listo.
+  const { width: areaWidth, height: areaHeight } = screen.getPrimaryDisplay().workAreaSize;
+  const width = Math.max(1024, Math.min(1320, Math.floor(areaWidth * 0.94)));
+  const height = Math.max(680, Math.min(860, Math.floor(areaHeight * 0.92)));
+
   mainWindow = new BrowserWindow({
-    width: 1320,
-    height: 860,
+    width,
+    height,
     minWidth: 1024,
     minHeight: 680,
+    show: false,
+    center: true,
     title: 'Pliegue — Preprensa Digital',
-    backgroundColor: '#f8fafc',
+    backgroundColor: '#fafafa',
     autoHideMenuBar: true,
     icon: path.join(__dirname, '../build/icon.png'),
     webPreferences: {
@@ -22,6 +32,19 @@ function createWindow() {
       nodeIntegration: false,
       sandbox: false,
     },
+  });
+
+  // Mostrar la ventana ya colocada (sin parpadeo). En Linux/Hyprland se abre
+  // maximizada para que quede bien acomodada; en el resto, centrada.
+  mainWindow.once('ready-to-show', () => {
+    if (!mainWindow) return;
+    if (process.platform === 'linux') {
+      mainWindow.show();
+      mainWindow.maximize();
+    } else {
+      mainWindow.center();
+      mainWindow.show();
+    }
   });
 
   // En Windows y Linux eliminamos por completo la barra de menús anticuada
