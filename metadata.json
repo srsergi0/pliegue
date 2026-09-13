@@ -1,0 +1,6 @@
+{
+  "name": "Impositor PDF",
+  "description": "Herramienta profesional y minimalista para imposición de páginas PDF, distribución en pliegos, rotación y ajuste de márgenes de corte con vista previa en tiempo real.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

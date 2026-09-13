@@ -1,0 +1,101 @@
+{
+  "name": "pliegue",
+  "private": true,
+  "version": "1.0.0",
+  "author": "srsergio <sergiolazaromondargo@gmail.com>",
+  "description": "Pliegue — Software profesional de imposición de páginas y preprensa digital de archivos PDF",
+  "main": "dist-electron/main.cjs",
+  "type": "module",
+  "scripts": {
+    "dev": "concurrently -k -s first \"bun run dev:vite\" \"bun run dev:electron\"",
+    "dev:vite": "vite --port=3000",
+    "dev:electron": "bun run build:electron && wait-on tcp:3000 && electron .",
+    "build": "bun run build:vite && bun run build:electron",
+    "build:vite": "vite build",
+    "build:electron": "bun run scripts/build-electron.mjs",
+    "preview": "vite preview",
+    "dist": "bun run build && electron-builder",
+    "dist:dir": "bun run build && electron-builder --dir",
+    "dist:win": "bun run build && electron-builder --win",
+    "dist:mac": "bun run build && electron-builder --mac",
+    "dist:linux": "bun run build && electron-builder --linux",
+    "dist:all": "bun run build && electron-builder -mwl",
+    "lint": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@tailwindcss/vite": "^4.1.14",
+    "@vitejs/plugin-react": "^5.0.4",
+    "lucide-react": "^0.546.0",
+    "motion": "^12.23.24",
+    "pdf-lib": "^1.17.1",
+    "pdfjs-dist": "^6.3.289",
+    "react": "^19.0.1",
+    "react-dom": "^19.0.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.14.0",
+    "autoprefixer": "^10.4.21",
+    "concurrently": "^10.0.5",
+    "cross-env": "^10.1.0",
+    "electron": "^44.3.0",
+    "electron-builder": "^26.15.3",
+    "esbuild": "^0.25.0",
+    "tailwindcss": "^4.1.14",
+    "tsx": "^4.21.0",
+    "typescript": "~5.8.2",
+    "vite": "^6.2.3",
+    "wait-on": "^9.1.0"
+  },
+  "build": {
+    "appId": "com.pliegue.app",
+    "productName": "Pliegue",
+    "icon": "build/icon.png",
+    "npmRebuild": false,
+    "publish": {
+      "provider": "github",
+      "owner": "srsergi0",
+      "repo": "pliegue"
+    },
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "dist-electron/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": [
+        "nsis",
+        "portable"
+      ],
+      "artifactName": "${productName}-Setup-${version}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Pliegue"
+    },
+    "mac": {
+      "target": [
+        "dmg",
+        "zip"
+      ],
+      "category": "public.app-category.productivity",
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false,
+      "artifactName": "${productName}-${version}-mac.${ext}"
+    },
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb"
+      ],
+      "category": "Graphics;Office;Publishing;",
+      "synopsis": "Software profesional de imposición de páginas y preprensa digital de archivos PDF",
+      "artifactName": "${productName}-${version}-linux.${ext}"
+    }
+  }
+}

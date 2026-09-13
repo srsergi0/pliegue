@@ -1,0 +1,76 @@
+name: Release Pliegue
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  create-release:
+    name: Crear GitHub Release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Descargar repositorio
+        uses: actions/checkout@v4
+
+      - name: Inicializar Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG_NAME="${{ github.ref_name }}"
+          if [ -z "$TAG_NAME" ] || [ "$TAG_NAME" = "main" ]; then
+            TAG_NAME="v1.0.0"
+          fi
+          echo "Creando o verificando release para $TAG_NAME..."
+          gh release create "$TAG_NAME" \
+            --title "Pliegue $TAG_NAME" \
+            --generate-notes \
+            --draft=false || echo "El release ya existe o se actualizará."
+
+  build-and-release:
+    name: Compilar para ${{ matrix.os }}
+    needs: create-release
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            platform: --win
+          - os: macos-latest
+            platform: --mac
+          - os: ubuntu-latest
+            platform: --linux
+
+    steps:
+      - name: Descargar repositorio
+        uses: actions/checkout@v4
+
+      - name: Instalar Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Instalar dependencias del sistema en Linux
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libarchive-tools fakeroot
+
+      - name: Instalar dependencias del proyecto
+        run: bun install
+
+      - name: Generar iconos de aplicación
+        run: bun run scripts/generate-icons.ts
+
+      - name: Compilar aplicación (Frontend Vite + Electron)
+        run: bun run build
+
+      - name: Empaquetar y publicar instaladores
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: bunx electron-builder ${{ matrix.platform }} --publish always
