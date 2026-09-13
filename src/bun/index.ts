@@ -65,8 +65,18 @@ const rpc = defineElectrobunRPC<PliegueRPCSchema>('bun', {
         defaultName: string;
         dataB64: string;
       }) => {
-        // El SDK aún no expone diálogo "guardar como": se elige carpeta
-        // y se escribe con el nombre sugerido.
+        // El SDK aún no expone diálogo "guardar como": se explica, se elige
+        // carpeta y se escribe con el nombre sugerido.
+        const confirm = await Utils.showMessageBox({
+          type: 'info',
+          title: 'Guardar PDF Imposicionado',
+          message: `Elige la carpeta donde guardar:\n${sanitizeFileName(defaultName)}`,
+          buttons: ['Elegir carpeta', 'Cancelar'],
+          defaultId: 0,
+          cancelId: 1,
+        });
+        if (confirm.response !== 0) return null;
+
         const picked = await Utils.openFileDialog({
           startingFolder: Utils.paths.documents,
           allowedFileTypes: '*',
@@ -77,8 +87,10 @@ const rpc = defineElectrobunRPC<PliegueRPCSchema>('bun', {
         const dir = picked[0];
         if (!dir) return null;
         const fullPath = `${dir.replace(/[/\\]$/, '')}/${sanitizeFileName(defaultName)}`;
+        console.log(`[Pliegue] savePdf: escribiendo ${fullPath}`);
         try {
           await Bun.write(fullPath, Buffer.from(dataB64, 'base64'));
+          console.log('[Pliegue] savePdf: OK');
           return fullPath;
         } catch (err) {
           console.error('[Pliegue] error guardando PDF:', err);

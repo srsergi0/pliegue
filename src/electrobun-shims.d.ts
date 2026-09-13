@@ -54,6 +54,15 @@ declare module 'electrobun/main' {
     }): Promise<string[]>;
     openPath(path: string): boolean;
     showItemInFolder(path: string): void;
+    showMessageBox(opts: {
+      type?: string;
+      title?: string;
+      message?: string;
+      detail?: string;
+      buttons?: string[];
+      defaultId?: number;
+      cancelId?: number;
+    }): Promise<{ response: number }>;
   };
 
   export const Updater: {
