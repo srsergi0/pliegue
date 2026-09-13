@@ -165,10 +165,11 @@ export default function App() {
         await processPDFBytes(res.data, res.name, res.data.length);
       }
     } catch (err) {
-      console.error('Error al abrir diálogo nativo:', err);
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error(`Error al abrir diálogo nativo: ${msg}`, err);
       setNativeBroken(true);
       setErrorMsg(
-        'No se pudo abrir el explorador nativo, usando el selector web.'
+        `No se pudo abrir el explorador nativo (${msg}), usando el selector web.`
       );
       hiddenFileInputRef.current?.click();
     }

@@ -87,18 +87,33 @@ export async function desktopOpenPDF(): Promise<OpenPDFResult> {
   if (isElectron && window.electronAPI) {
     return window.electronAPI.openPDFDialog();
   }
-  const rpc = await withTimeout(getRpc(), 8000, 'RPC no disponible');
-  const path = await withTimeout(
-    rpc.request('pickPdf', {}),
-    60000,
-    'Diálogo sin respuesta'
-  );
+  let rpc: RpcClient;
+  try {
+    rpc = await withTimeout(getRpc(), 8000, 'RPC no disponible');
+  } catch (err) {
+    throw new Error(`Fallo al conectar RPC: ${(err as Error).message}`);
+  }
+  let path: string | null;
+  try {
+    path = await withTimeout(
+      rpc.request('pickPdf', {}),
+      60000,
+      'Diálogo sin respuesta'
+    );
+  } catch (err) {
+    throw new Error(`Fallo pickPdf: ${(err as Error).message}`);
+  }
   if (!path) return { canceled: true };
-  const file = await withTimeout(
-    rpc.request('readPdf', { path }),
-    120000,
-    'Lectura sin respuesta'
-  );
+  let file: { name: string; size: number; dataB64: string } | null;
+  try {
+    file = await withTimeout(
+      rpc.request('readPdf', { path }),
+      120000,
+      'Lectura sin respuesta'
+    );
+  } catch (err) {
+    throw new Error(`Fallo readPdf: ${(err as Error).message}`);
+  }
   if (!file) return { canceled: true };
   const data = b64ToU8(file.dataB64);
   return { canceled: false, name: file.name, path, data };

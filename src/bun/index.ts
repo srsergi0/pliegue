@@ -22,10 +22,12 @@ const rpc = defineElectrobunRPC<PliegueRPCSchema>('bun', {
   handlers: {
     requests: {
       ping: async () => {
+        console.log('[Pliegue] ping recibido');
         return `Pliegue main OK (bun ${Bun.version})`;
       },
 
       pickPdf: async () => {
+        console.log('[Pliegue] pickPdf: abriendo diálogo...');
         const picked = await Utils.openFileDialog({
           startingFolder: Utils.paths.documents,
           allowedFileTypes: 'pdf',
@@ -33,6 +35,7 @@ const rpc = defineElectrobunRPC<PliegueRPCSchema>('bun', {
           canChooseDirectory: false,
           allowsMultipleSelection: false,
         });
+        console.log(`[Pliegue] pickPdf: diálogo devolvió ${picked.length} rutas`);
         const path = picked[0];
         if (!path || !/\.pdf$/i.test(path)) return null;
         return path;
@@ -40,6 +43,7 @@ const rpc = defineElectrobunRPC<PliegueRPCSchema>('bun', {
 
       readPdf: async ({ path }: { path: string }) => {
         try {
+          console.log(`[Pliegue] readPdf: ${path}`);
           const file = Bun.file(path);
           if (!(await file.exists())) return null;
           const buf = Buffer.from(await file.arrayBuffer());
