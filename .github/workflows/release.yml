@@ -70,7 +70,22 @@ jobs:
       - name: Compilar aplicación (Frontend Vite + Electron)
         run: bun run build
 
-      - name: Empaquetar y publicar instaladores
+      - name: Empaquetar instaladores
+        run: bunx electron-builder ${{ matrix.platform }}
+
+      - name: Subir binarios a GitHub Release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: bunx electron-builder ${{ matrix.platform }} --publish always
+        shell: bash
+        run: |
+          TAG_NAME="${{ github.ref_name }}"
+          if [ -z "$TAG_NAME" ] || [ "$TAG_NAME" = "main" ]; then
+            TAG_NAME="v1.0.0"
+          fi
+          shopt -s nullglob
+          FILES=(release/*.exe release/*.dmg release/*.zip release/*.AppImage release/*.deb)
+          echo "Archivos generados para subir:"
+          ls -lh "${FILES[@]}" || true
+          if [ ${#FILES[@]} -gt 0 ]; then
+            gh release upload "$TAG_NAME" "${FILES[@]}" --clobber
+          fi
