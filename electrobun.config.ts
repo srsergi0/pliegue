@@ -4,7 +4,7 @@ export default {
 	app: {
 		name: "Pliegue",
 		identifier: "com.srsergio.pliegue",
-		version: "1.0.2",
+		version: "1.0.3",
 	},
 	build: {
 		mainProcess: "cottontail",
