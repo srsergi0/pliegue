@@ -371,7 +371,7 @@ export default function App() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-neutral-50 text-neutral-800 flex flex-col font-sans selection:bg-neutral-200 relative">
+    <div className="min-h-screen bg-neutral-50 text-neutral-800 flex flex-col font-sans selection:bg-neutral-200 relative overflow-x-clip">
       {/* Hidden file input for web fallback */}
       <input
         ref={hiddenFileInputRef}
@@ -486,11 +486,11 @@ export default function App() {
       )}
 
       {/* Main Workspace */}
-      <main className="flex-1 flex flex-col md:flex-row overflow-hidden">
+      <main className="flex-1 flex flex-col md:flex-row overflow-hidden min-w-0">
 
         {/* Onboarding / PDF Loading state */}
         {!pdfBytes ? (
-          <div className="flex-1 flex flex-col items-center justify-center p-6 max-w-4xl mx-auto w-full">
+          <div className="flex-1 flex flex-col items-center justify-center p-6 max-w-4xl mx-auto w-full min-w-0">
 
             {/* Title intro */}
             <div className="text-center mb-8 max-w-lg select-none">
@@ -607,7 +607,7 @@ export default function App() {
         ) : (
 
           /* Full Screen Workspace Layout when PDF is loaded */
-          <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
+          <div className="flex-1 flex flex-col lg:flex-row overflow-hidden min-w-0">
 
             {/* Left Column: Precise Controls */}
             <aside className="w-full lg:w-[380px] shrink-0 border-r border-neutral-200/80 bg-neutral-50/20 max-h-[450px] lg:max-h-none overflow-y-auto">
@@ -621,7 +621,7 @@ export default function App() {
             </aside>
 
             {/* Right Column: High Fidelity WYSIWYG Prepress Preview */}
-            <section className="flex-1 flex flex-col overflow-y-auto p-4 md:p-6 lg:p-8">
+            <section className="flex-1 flex flex-col overflow-y-auto p-4 md:p-6 lg:p-8 min-w-0">
 
               {/* Alert message if any */}
               {errorMsg && (

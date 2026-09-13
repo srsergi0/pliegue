@@ -38,6 +38,11 @@ function createWindow() {
   // maximizada para que quede bien acomodada; en el resto, centrada.
   mainWindow.once('ready-to-show', () => {
     if (!mainWindow) return;
+    // Normalizar zoom: si quedó un zoom persistido (p. ej. Ctrl++) el
+    // contenido se ve gigante y cortado. Se fuerza 100% al arrancar.
+    if (mainWindow.webContents.getZoomFactor() !== 1) {
+      mainWindow.webContents.setZoomFactor(1);
+    }
     if (process.platform === 'linux') {
       mainWindow.show();
       mainWindow.maximize();
@@ -45,6 +50,17 @@ function createWindow() {
       mainWindow.center();
       mainWindow.show();
     }
+    const display = screen.getPrimaryDisplay();
+    console.log(
+      '[Pliegue] ventana:',
+      mainWindow.getBounds(),
+      'zoom:',
+      mainWindow.webContents.getZoomFactor(),
+      'pantalla util:',
+      display.workAreaSize,
+      'escala:',
+      display.scaleFactor
+    );
   });
 
   // En Windows y Linux eliminamos por completo la barra de menús anticuada
@@ -95,12 +111,24 @@ function createWindow() {
   }
 
   // Abrir consola de desarrollo (DevTools) con F12 o Ctrl+Shift+I
+  // Control de zoom: Ctrl+0 restablece al 100%, Ctrl++ / Ctrl+- ajustan
   mainWindow.webContents.on('before-input-event', (event, input) => {
     if (
       input.key === 'F12' ||
       (input.control && input.shift && input.key.toLowerCase() === 'i')
     ) {
       mainWindow?.webContents.toggleDevTools();
+    }
+    if (input.control && !input.shift && !input.alt && !input.meta) {
+      const wc = mainWindow?.webContents;
+      if (!wc) return;
+      if (input.key === '0') {
+        wc.setZoomFactor(1);
+      } else if (input.key === '+' || input.key === '=') {
+        wc.setZoomFactor(Math.min(3, wc.getZoomFactor() + 0.1));
+      } else if (input.key === '-') {
+        wc.setZoomFactor(Math.max(0.5, wc.getZoomFactor() - 0.1));
+      }
     }
   });
 
