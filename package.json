@@ -51,11 +51,6 @@
     "productName": "Pliegue",
     "icon": "build/icon.png",
     "npmRebuild": false,
-    "publish": {
-      "provider": "github",
-      "owner": "srsergi0",
-      "repo": "pliegue"
-    },
     "directories": {
       "output": "release"
     },

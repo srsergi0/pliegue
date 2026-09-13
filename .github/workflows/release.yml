@@ -71,7 +71,7 @@ jobs:
         run: bun run build
 
       - name: Empaquetar instaladores
-        run: bunx electron-builder ${{ matrix.platform }}
+        run: bunx electron-builder ${{ matrix.platform }} --publish never
 
       - name: Subir binarios a GitHub Release
         env:
