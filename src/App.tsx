@@ -94,7 +94,10 @@ export default function App() {
   };
 
   const handleOpenAnotherFile = () => {
-    if (isDesktop && !nativeBroken) {
+    // En Electrobun siempre el selector web (carga bytes directo, sin RPC);
+    // lo nativo se reserva para guardar (requiere escribir en disco).
+    // En Electron se prefiere el diálogo nativo salvo fallo previo.
+    if (isElectron && !nativeBroken) {
       handleOpenNativeDialog();
     } else {
       hiddenFileInputRef.current?.click();
@@ -384,11 +387,12 @@ export default function App() {
       // Ctrl+O o Cmd+O para abrir archivo
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'o') {
         e.preventDefault();
-        if (isDesktop) {
+        if (isElectron && !nativeBroken) {
           handleOpenNativeDialog();
         } else {
           document.getElementById('file-upload-input')?.click();
         }
+      }
       }
 
       // F12 abre DevTools en Electrobun (en Electron lo gestiona el main)
@@ -446,7 +450,7 @@ export default function App() {
         accept="application/pdf"
         onChange={handleFileUpload}
         className="hidden"
-        id="hidden-global-file-input"
+        id="file-upload-input"
       />
 
       {/* Header bar */}

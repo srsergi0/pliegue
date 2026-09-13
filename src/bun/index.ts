@@ -48,6 +48,8 @@ async function pickPdfRobust(): Promise<string | null> {
 }
 
 const rpc = defineElectrobunRPC<PliegueRPCSchema>('bun', {
+  // Los diálogos modales esperan al usuario: timeout generoso
+  maxRequestTime: 300000,
   handlers: {
     requests: {
       ping: async () => {

@@ -41,7 +41,11 @@ async function getRpc(): Promise<RpcClient> {
       // OJO: no importar defineElectrobunRPC directo del SDK empaquetado
       // (el re-export se pierde en el bundle); usar el estático de la clase.
       const { Electroview } = await import('electrobun/view');
-      const rpc = Electroview.defineRPC({ handlers: {} });
+      const rpc = Electroview.defineRPC({
+        // Los diálogos modales esperan al usuario: timeout generoso
+        maxRequestTime: 300000,
+        handlers: {},
+      });
       new Electroview({ rpc });
       return rpc as unknown as RpcClient;
     })();
