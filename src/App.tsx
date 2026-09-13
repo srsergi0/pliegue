@@ -23,6 +23,7 @@ import {
 import { pdfjs } from './utils/pdfSetup';
 import {
   isDesktop,
+  isElectron,
   isElectrobun,
   desktopOpenPDF,
   desktopSavePDF,
@@ -392,7 +393,6 @@ export default function App() {
         } else {
           document.getElementById('file-upload-input')?.click();
         }
-      }
       }
 
       // F12 abre DevTools en Electrobun (en Electron lo gestiona el main)
