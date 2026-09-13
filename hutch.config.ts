@@ -9,10 +9,10 @@ export default {
 		//     (si `bun run dev:vite` está corriendo en otra terminal hay HMR).
 		//   - `hutch run build` → instalador estable.
 		"eb:prepare": ["hutch", "electrobun", "prepare"],
-		dev: "hutch electrobun prepare && bun run build:vite && hutch electrobun dev --watch",
+		dev: "hutch electrobun prepare && ./node_modules/.bin/vite build && hutch electrobun dev --watch",
 		start: "hutch electrobun prepare && hutch electrobun dev",
-		build: "hutch electrobun prepare && bun run build:vite && hutch electrobun build --env=stable",
-		"build:canary": "hutch electrobun prepare && bun run build:vite && hutch electrobun build --env=canary",
+		build: "hutch electrobun prepare && ./node_modules/.bin/vite build && hutch electrobun build --env=stable",
+		"build:canary": "hutch electrobun prepare && ./node_modules/.bin/vite build && hutch electrobun build --env=canary",
 	},
 	electrobun: {
 		version: "2.0.2-beta.27",
