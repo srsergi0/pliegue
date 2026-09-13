@@ -8,6 +8,11 @@ bun.lockb
 release/
 dist/
 dist-electron/
+# Electrobun / Hutch (rama electrobun)
+build/
+artifacts/
+.hutch/
+.cottontail-tmp/
 *.tmp
 *.blockmap
 

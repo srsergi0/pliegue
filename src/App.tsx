@@ -21,6 +21,17 @@ import {
   Sparkles,
 } from 'lucide-react';
 import { pdfjs } from './utils/pdfSetup';
+import {
+  isDesktop,
+  isElectrobun,
+  desktopOpenPDF,
+  desktopSavePDF,
+  desktopOpenPath,
+  desktopShowInFolder,
+  desktopToggleDevTools,
+  applyZoom,
+  getZoom,
+} from './desktop';
 
 const DEFAULT_SETTINGS: ImpositionSettings = {
   sheetPreset: 'A4',
@@ -69,7 +80,6 @@ export default function App() {
   const [toastMsg, setToastMsg] = useState<string | null>(null);
 
   const hiddenFileInputRef = useRef<HTMLInputElement>(null);
-  const isElectron = typeof window !== 'undefined' && !!window.electronAPI?.isElectron;
 
   const handleApplyTemplate = (tmpl: JobTemplate) => {
     setSettings((prev) => ({
@@ -81,7 +91,7 @@ export default function App() {
   };
 
   const handleOpenAnotherFile = () => {
-    if (isElectron) {
+    if (isDesktop) {
       handleOpenNativeDialog();
     } else {
       hiddenFileInputRef.current?.click();
@@ -143,11 +153,10 @@ export default function App() {
     }
   };
 
-  // Diálogo nativo de Electron para abrir archivo
+  // Diálogo nativo (Electron o Electrobun) para abrir archivo
   const handleOpenNativeDialog = async () => {
-    if (!window.electronAPI) return;
     try {
-      const res = await window.electronAPI.openPDFDialog();
+      const res = await desktopOpenPDF();
       if (!res.canceled && res.data && res.name) {
         await processPDFBytes(res.data, res.name, res.data.length);
       }
@@ -298,8 +307,8 @@ export default function App() {
       const cleanName = sourcePDFInfo.name.replace(/\.[^/.]+$/, "");
       const defaultFileName = `pliegue_${cleanName}_${settings.sheetPreset}.pdf`;
 
-      if (window.electronAPI) {
-        const result = await window.electronAPI.savePDF(defaultFileName, outputBytes);
+      if (isDesktop) {
+        const result = await desktopSavePDF(defaultFileName, outputBytes);
         if (!result.canceled && result.filePath) {
           setSavedFilePath(result.filePath);
         } else if (result.error) {
@@ -337,10 +346,30 @@ export default function App() {
       // Ctrl+O o Cmd+O para abrir archivo
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'o') {
         e.preventDefault();
-        if (isElectron) {
+        if (isDesktop) {
           handleOpenNativeDialog();
         } else {
           document.getElementById('file-upload-input')?.click();
+        }
+      }
+
+      // F12 abre DevTools en Electrobun (en Electron lo gestiona el main)
+      if (isElectrobun && (e.key === 'F12' || (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'i'))) {
+        e.preventDefault();
+        desktopToggleDevTools();
+      }
+
+      // Zoom en Electrobun (en Electron lo gestiona el proceso main)
+      if (isElectrobun && e.ctrlKey && !e.shiftKey && !e.altKey && !e.metaKey) {
+        if (e.key === '0') {
+          e.preventDefault();
+          applyZoom(1);
+        } else if (e.key === '+' || e.key === '=') {
+          e.preventDefault();
+          applyZoom(getZoom() + 0.1);
+        } else if (e.key === '-') {
+          e.preventDefault();
+          applyZoom(getZoom() - 0.1);
         }
       }
 
@@ -355,7 +384,7 @@ export default function App() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isElectron, pdfBytes, plan, exporting]);
+  }, [isDesktop, pdfBytes, plan, exporting]);
 
   // Evitar que el navegador o Electron navegue al archivo si se suelta fuera de la tarjeta
   useEffect(() => {
@@ -407,7 +436,7 @@ export default function App() {
             <Sparkles className="w-3.5 h-3.5 text-amber-600" />
             <span>Plantillas</span>
           </button>
-          {pdfBytes && isElectron && (
+          {pdfBytes && isDesktop && (
             <button
               onClick={handleOpenNativeDialog}
               disabled={parsing || exporting}
@@ -434,7 +463,7 @@ export default function App() {
               ) : (
                 <>
                   <Download className="w-3.5 h-3.5" />
-                  <span>{isElectron ? 'Guardar PDF Imposicionado...' : 'Exportar PDF Imposicionado'}</span>
+                  <span>{isDesktop ? 'Guardar PDF Imposicionado...' : 'Exportar PDF Imposicionado'}</span>
                 </>
               )}
             </button>
@@ -456,17 +485,17 @@ export default function App() {
             </span>
           </div>
           <div className="flex items-center gap-2 shrink-0">
-            {isElectron && (
+            {isDesktop && (
               <>
                 <button
-                  onClick={() => window.electronAPI?.openPath(savedFilePath)}
+                  onClick={() => desktopOpenPath(savedFilePath)}
                   className="flex items-center gap-1.5 bg-emerald-700 hover:bg-emerald-800 text-white font-medium px-2.5 py-1 rounded text-xs transition-colors cursor-pointer"
                 >
                   <ExternalLink className="w-3 h-3" />
                   <span>Abrir PDF</span>
                 </button>
                 <button
-                  onClick={() => window.electronAPI?.showInFolder(savedFilePath)}
+                  onClick={() => desktopShowInFolder(savedFilePath)}
                   className="flex items-center gap-1.5 bg-white hover:bg-emerald-100/60 text-emerald-800 border border-emerald-300 font-medium px-2.5 py-1 rounded text-xs transition-colors cursor-pointer"
                 >
                   <FolderOpen className="w-3 h-3" />

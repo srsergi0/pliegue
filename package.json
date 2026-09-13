@@ -33,6 +33,7 @@
     "react-dom": "^19.0.1"
   },
   "devDependencies": {
+    "@types/bun": "^1.4.2",
     "@types/node": "^22.14.0",
     "autoprefixer": "^10.4.21",
     "concurrently": "^10.0.5",

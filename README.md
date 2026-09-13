@@ -85,6 +85,22 @@ bun run dist:mac    # macOS (.dmg)
 bun run dist:linux  # Linux (.AppImage, .deb)
 ```
 
+### 🧪 Variante Electrobun (rama `electrobun`)
+
+Migración en curso de Electron a [Electrobun](https://framework.blackboard.sh) (mismo React,
+proceso main en Bun/Cottontail, binario ~30 MB). Requiere Hutch canary:
+
+```bash
+# Alias sugerido (el catálogo beta exige Hutch canary, no el de producción)
+alias hutch-canary=~/.hutch/releases/hutch/0.27.0-canary.8/e4817f55fff3f02eeda9135306875ecdf8faad6e/linux-x64/bin/hutch
+
+hutch-canary run dev    # prepara + compila el React + abre la app (HMR si corre `bun run dev:vite`)
+hutch-canary run build  # instalador estable en artifacts/
+```
+
+Notas: al guardar se elige **carpeta** (el SDK aún no trae diálogo "guardar como") y el
+zoom en Electrobun es por CSS (`Ctrl+0` lo restablece).
+
 ---
 
 ## 📄 Licencia
