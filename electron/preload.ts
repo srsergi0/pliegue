@@ -41,6 +41,14 @@ const electronAPI = {
   maximizeWindow: () => ipcRenderer.invoke('window:maximize'),
   closeWindow: () => ipcRenderer.invoke('window:close'),
   isMaximized: () => ipcRenderer.invoke('window:is-maximized'),
+
+  // Idioma nativo del sistema operativo
+  getSystemLocale: async (): Promise<string> => {
+    return await ipcRenderer.invoke('app:get-locale');
+  },
+  getPreferredLanguages: async (): Promise<string[]> => {
+    return await ipcRenderer.invoke('app:get-preferred-languages');
+  },
 };
 
 contextBridge.exposeInMainWorld('electronAPI', electronAPI);

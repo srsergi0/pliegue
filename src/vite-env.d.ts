@@ -23,6 +23,8 @@ export interface ElectronAPI {
   maximizeWindow: () => Promise<void>;
   closeWindow: () => Promise<void>;
   isMaximized: () => Promise<boolean>;
+  getSystemLocale?: () => Promise<string>;
+  getPreferredLanguages?: () => Promise<string[]>;
 }
 
 declare global {

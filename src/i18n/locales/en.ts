@@ -127,5 +127,7 @@ export const en: Translations = {
     selectLanguage: 'Language',
     spanish: 'Español',
     english: 'English',
+    japanese: '日本語 (Japanese)',
+    chinese: '简体中文 (Chinese)',
   },
 };

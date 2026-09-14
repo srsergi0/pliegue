@@ -249,6 +249,15 @@ ipcMain.handle('window:is-maximized', () => {
   return mainWindow?.isMaximized() || false;
 });
 
+// Idioma y configuración regional del sistema operativo
+ipcMain.handle('app:get-locale', () => {
+  return app.getLocale();
+});
+
+ipcMain.handle('app:get-preferred-languages', () => {
+  return app.getPreferredSystemLanguages?.() || [app.getLocale()];
+});
+
 // Ciclo de vida de la aplicación Electron
 app.whenReady().then(() => {
   createWindow();

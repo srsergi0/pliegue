@@ -1,4 +1,4 @@
-export type Language = 'es' | 'en';
+export type Language = 'es' | 'en' | 'ja' | 'zh';
 
 export interface Translations {
   app: {
@@ -126,5 +126,7 @@ export interface Translations {
     selectLanguage: string;
     spanish: string;
     english: string;
+    japanese: string;
+    chinese: string;
   };
 }
