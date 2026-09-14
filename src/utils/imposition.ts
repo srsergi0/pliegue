@@ -10,6 +10,54 @@ export interface VirtualPage {
 }
 
 /**
+ * Localized strings used to build human-readable sheet labels
+ * (e.g. "Hoja 1 · Anverso (Tiro)"). Placeholders: {n}, {m}, {a}, {b}, {c}, {r}.
+ */
+export interface SheetLabelStrings {
+  sheet: string;
+  front: string;
+  back: string;
+  pressFront: string;
+  pressBack: string;
+  faceFront: string;
+  faceBack: string;
+  crossFold8: string;
+  twinBooklets: string;
+  signaturesOf: string;
+  bookletCutNest: string;
+  cutAndStack: string;
+  repeatedPage: string;
+  repeatedSheet: string;
+  sheetOf: string;
+}
+
+export const ES_SHEET_LABELS: SheetLabelStrings = {
+  sheet: 'Hoja',
+  front: 'Anverso',
+  back: 'Reverso',
+  pressFront: 'Tiro',
+  pressBack: 'Retiro',
+  faceFront: 'Frente',
+  faceBack: 'Dorso',
+  crossFold8: 'Plegado en Cruz 8 págs',
+  twinBooklets: '{n} Folletos Gemelos',
+  signaturesOf: '{n} Cuadernillos de {m} págs',
+  bookletCutNest: 'Folleto {n} págs · Corte y Encarte',
+  cutAndStack: 'Corte & Apilado',
+  repeatedPage: 'Pág. {n} Repetida',
+  repeatedSheet: 'Pliego Pág. {n} Repetida ({c}x{r})',
+  sheetOf: 'Pliego {a} de {b}',
+};
+
+function fill(template: string, vars: Record<string, string | number>): string {
+  let out = template;
+  for (const [k, v] of Object.entries(vars)) {
+    out = out.split(`{${k}}`).join(String(v));
+  }
+  return out;
+}
+
+/**
  * Builds the effective list of pages to impose.
  * Supports:
  * 1. Manga / Spreads: Splits panoramic/landscape pages into two halves on facing internal pages.
@@ -480,7 +528,8 @@ export function calculateCellPlacement(
  */
 export function generateImpositionPlan(
   settings: ImpositionSettings,
-  sourcePDF: PDFSourceInfo | null
+  sourcePDF: PDFSourceInfo | null,
+  L: SheetLabelStrings = ES_SHEET_LABELS
 ): ImposedSheet[] {
   if (!sourcePDF || sourcePDF.pageCount === 0) {
     return [];
@@ -625,7 +674,7 @@ export function generateImpositionPlan(
             sheetIndex: sheets.length,
             sheetNumber: globalSheetNumber,
             side: 'front',
-            label: `Hoja ${globalSheetNumber} · Anverso (Plegado en Cruz 8 págs)`,
+            label: `${L.sheet} ${globalSheetNumber} · ${L.front} (${L.crossFold8})`,
             cells: frontCells,
           });
 
@@ -644,7 +693,7 @@ export function generateImpositionPlan(
               sheetIndex: sheets.length,
               sheetNumber: globalSheetNumber,
               side: 'back',
-              label: `Hoja ${globalSheetNumber} · Reverso (Plegado en Cruz 8 págs)`,
+              label: `${L.sheet} ${globalSheetNumber} · ${L.back} (${L.crossFold8})`,
               cells: backCells,
             });
           }
@@ -694,7 +743,7 @@ export function generateImpositionPlan(
             sheetIndex: sheets.length,
             sheetNumber: globalSheetNumber,
             side: 'front',
-            label: `Hoja ${globalSheetNumber} · Anverso (${spreadsPerSheet} Folletos Gemelos)`,
+            label: `${L.sheet} ${globalSheetNumber} · ${L.front} (${fill(L.twinBooklets, { n: spreadsPerSheet })})`,
             cells: frontCells,
           });
 
@@ -727,7 +776,7 @@ export function generateImpositionPlan(
               sheetIndex: sheets.length,
               sheetNumber: globalSheetNumber,
               side: 'back',
-              label: `Hoja ${globalSheetNumber} · Reverso (${spreadsPerSheet} Folletos Gemelos)`,
+              label: `${L.sheet} ${globalSheetNumber} · ${L.back} (${fill(L.twinBooklets, { n: spreadsPerSheet })})`,
               cells: backCells,
             });
           }
@@ -836,8 +885,8 @@ export function generateImpositionPlan(
           sheetNumber: globalSheetNumber,
           side: 'front',
           label: isMultiSpread
-            ? `Hoja ${globalSheetNumber} · Anverso (${sigsPerSheet} Cuadernillos de ${sigStep} págs)`
-            : `Hoja ${globalSheetNumber} · Anverso (Tiro)`,
+            ? `${L.sheet} ${globalSheetNumber} · ${L.front} (${fill(L.signaturesOf, { n: sigsPerSheet, m: sigStep })})`
+            : `${L.sheet} ${globalSheetNumber} · ${L.front} (${L.pressFront})`,
           cells: frontCells,
         });
 
@@ -847,8 +896,8 @@ export function generateImpositionPlan(
             sheetNumber: globalSheetNumber,
             side: 'back',
             label: isMultiSpread
-              ? `Hoja ${globalSheetNumber} · Reverso (${sigsPerSheet} Cuadernillos de ${sigStep} págs)`
-              : `Hoja ${globalSheetNumber} · Reverso (Retiro)`,
+              ? `${L.sheet} ${globalSheetNumber} · ${L.back} (${fill(L.signaturesOf, { n: sigsPerSheet, m: sigStep })})`
+              : `${L.sheet} ${globalSheetNumber} · ${L.back} (${L.pressBack})`,
             cells: backCells,
           });
         }
@@ -891,8 +940,8 @@ export function generateImpositionPlan(
             sheetNumber: globalSheetNumber,
             side: 'front',
             label: isMultiSpread
-              ? `Hoja ${globalSheetNumber} · Anverso (Folleto ${cols * rows} págs · Corte y Encarte)`
-              : `Hoja ${globalSheetNumber} · Anverso (Tiro)`,
+              ? `${L.sheet} ${globalSheetNumber} · ${L.front} (${fill(L.bookletCutNest, { n: cols * rows })})`
+              : `${L.sheet} ${globalSheetNumber} · ${L.front} (${L.pressFront})`,
             cells: frontCells,
           });
 
@@ -902,8 +951,8 @@ export function generateImpositionPlan(
               sheetNumber: globalSheetNumber,
               side: 'back',
               label: isMultiSpread
-                ? `Hoja ${globalSheetNumber} · Reverso (Folleto ${cols * rows} págs · Corte y Encarte)`
-                : `Hoja ${globalSheetNumber} · Reverso (Retiro)`,
+                ? `${L.sheet} ${globalSheetNumber} · ${L.back} (${fill(L.bookletCutNest, { n: cols * rows })})`
+                : `${L.sheet} ${globalSheetNumber} · ${L.back} (${L.pressBack})`,
               cells: backCells,
             });
           }
@@ -992,7 +1041,7 @@ export function generateImpositionPlan(
           sheetIndex: sheets.length,
           sheetNumber: sheetNum,
           side: 'front',
-          label: `Hoja ${sheetNum} · Anverso (Frente)`,
+          label: `${L.sheet} ${sheetNum} · ${L.front} (${L.faceFront})`,
           cells: frontCells,
         });
 
@@ -1000,7 +1049,7 @@ export function generateImpositionPlan(
           sheetIndex: sheets.length,
           sheetNumber: sheetNum,
           side: 'back',
-          label: `Hoja ${sheetNum} · Reverso (Dorso)`,
+          label: `${L.sheet} ${sheetNum} · ${L.back} (${L.faceBack})`,
           cells: backCells,
         });
       }
@@ -1032,7 +1081,7 @@ export function generateImpositionPlan(
           sheetIndex: sheets.length,
           sheetNumber: sheetNum,
           side: 'front',
-          label: `Hoja ${sheetNum} · Anverso (Tiro)`,
+            label: `${L.sheet} ${sheetNum} · ${L.front} (${L.pressFront})`,
           cells: frontCells,
         });
 
@@ -1040,7 +1089,7 @@ export function generateImpositionPlan(
           sheetIndex: sheets.length,
           sheetNumber: sheetNum,
           side: 'back',
-          label: `Hoja ${sheetNum} · Reverso (Retiro)`,
+            label: `${L.sheet} ${sheetNum} · ${L.back} (${L.pressBack})`,
           cells: backCells,
         });
       }
@@ -1070,7 +1119,7 @@ export function generateImpositionPlan(
           sheetIndex: s,
           sheetNumber: s + 1,
           side: 'single',
-          label: `Hoja ${s + 1} de ${totalPhysicalSheets} (Corte & Apilado)`,
+          label: `${fill(L.sheetOf, { a: s + 1, b: totalPhysicalSheets })} (${L.cutAndStack})`,
           cells,
         });
       }
@@ -1102,7 +1151,7 @@ export function generateImpositionPlan(
           sheetIndex: sheets.length,
           sheetNumber: sheetNum,
           side: 'front',
-          label: `Hoja ${sheetNum} · Anverso (Corte & Apilado)`,
+            label: `${L.sheet} ${sheetNum} · ${L.front} (${L.cutAndStack})`,
           cells: frontCells,
         });
 
@@ -1110,7 +1159,7 @@ export function generateImpositionPlan(
           sheetIndex: sheets.length,
           sheetNumber: sheetNum,
           side: 'back',
-          label: `Hoja ${sheetNum} · Reverso (Corte & Apilado)`,
+            label: `${L.sheet} ${sheetNum} · ${L.back} (${L.cutAndStack})`,
           cells: backCells,
         });
       }
@@ -1143,7 +1192,7 @@ export function generateImpositionPlan(
         sheetIndex: 0,
         sheetNumber: 1,
         side: 'front',
-        label: `Hoja 1 · Anverso (Pág. 1 Repetida)`,
+          label: `${L.sheet} 1 · ${L.front} (${fill(L.repeatedPage, { n: 1 })})`,
         cells: frontCells,
       });
 
@@ -1151,7 +1200,7 @@ export function generateImpositionPlan(
         sheetIndex: 1,
         sheetNumber: 1,
         side: 'back',
-        label: `Hoja 1 · Reverso (Pág. 2 Repetida)`,
+          label: `${L.sheet} 1 · ${L.back} (${fill(L.repeatedPage, { n: 2 })})`,
         cells: backCells,
       });
 
@@ -1172,7 +1221,7 @@ export function generateImpositionPlan(
         sheetIndex: p,
         sheetNumber: p + 1,
         side: 'single',
-        label: `Pliego Pág. ${p + 1} Repetida (${cols}x${rows})`,
+          label: fill(L.repeatedSheet, { n: p + 1, c: cols, r: rows }),
         cells,
       });
     }
@@ -1199,7 +1248,7 @@ export function generateImpositionPlan(
       sheetIndex: s,
       sheetNumber: s + 1,
       side: 'single',
-      label: `Pliego ${s + 1} de ${totalSheets}`,
+      label: fill(L.sheetOf, { a: s + 1, b: totalSheets }),
       cells,
     });
   }

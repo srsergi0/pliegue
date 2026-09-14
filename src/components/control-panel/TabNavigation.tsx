@@ -34,28 +34,28 @@ export const TabNavigation: React.FC<TabNavigationProps> = ({
     {
       id: 'layout',
       label: t.tabs.layout,
-      shortLabel: 'Pliego',
+      shortLabel: t.tabs.shortLayout,
       icon: <Layout className="w-3.5 h-3.5 shrink-0" />,
       badge: layoutBadge,
     },
     {
       id: 'scaling',
       label: t.tabs.adjustments,
-      shortLabel: 'Dúplex',
+      shortLabel: t.tabs.shortAdjustments,
       icon: <Sliders className="w-3.5 h-3.5 shrink-0" />,
       badge: duplexBadge,
     },
     {
       id: 'margins',
       label: t.tabs.margins,
-      shortLabel: 'Corte',
+      shortLabel: t.tabs.shortMargins,
       icon: <Crop className="w-3.5 h-3.5 shrink-0" />,
       badge: marginBadge,
     },
   ];
 
   return (
-    <nav aria-label="Secciones de configuración" className="p-3 border-b border-neutral-200/80 bg-neutral-50/50 shrink-0 select-none">
+    <nav aria-label={t.tabs.navAria} className="p-3 border-b border-neutral-200/80 bg-neutral-50/50 shrink-0 select-none">
       <div className="grid grid-cols-3 p-1 bg-neutral-200/60 rounded-xl gap-1 relative">
         {tabs.map((tab) => {
           const isActive = activeTab === tab.id;

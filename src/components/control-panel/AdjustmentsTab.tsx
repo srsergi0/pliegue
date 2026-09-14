@@ -10,6 +10,7 @@ import {
   RotateCw,
   Sparkles,
 } from 'lucide-react';
+import { useI18n } from '../../i18n/I18nContext';
 
 interface AdjustmentsTabProps {
   settings: ImpositionSettings;
@@ -20,6 +21,7 @@ export const AdjustmentsTab: React.FC<AdjustmentsTabProps> = ({
   settings,
   onChangeSettings,
 }) => {
+  const { t } = useI18n();
   const updateSetting = <K extends keyof ImpositionSettings>(
     key: K,
     value: ImpositionSettings[K]
@@ -37,7 +39,7 @@ export const AdjustmentsTab: React.FC<AdjustmentsTabProps> = ({
         <div className="flex items-center gap-1.5 pb-1.5 border-b border-neutral-200/70">
           <Printer className="w-3.5 h-3.5 text-neutral-700" />
           <span className="text-xs uppercase tracking-wider font-bold text-neutral-800">
-            Impresión & Volteo Dúplex
+            {t.adjustments.duplexSection}
           </span>
         </div>
 
@@ -46,38 +48,38 @@ export const AdjustmentsTab: React.FC<AdjustmentsTabProps> = ({
           <button
             type="button"
             onClick={() => updateSetting('duplexMode', 'long_edge')}
-            title="Borde Largo: Estándar para libros, revistas y folletos plegados"
+            title={t.adjustments.duplexLongHint}
             className={`text-xs py-1.5 px-1 rounded-md font-semibold text-center transition-all cursor-pointer ${
               settings.duplexMode === 'long_edge'
                 ? 'bg-neutral-900 text-white shadow-xs'
                 : 'text-neutral-600 hover:text-neutral-900 hover:bg-white/60'
             }`}
           >
-            Borde Largo
+            {t.adjustments.duplexLong}
           </button>
           <button
             type="button"
             onClick={() => updateSetting('duplexMode', 'short_edge')}
-            title="Borde Corto: Reverso volteado para blocs, calendarios o talonarios"
+            title={t.adjustments.duplexShortHint}
             className={`text-xs py-1.5 px-1 rounded-md font-semibold text-center transition-all cursor-pointer ${
               settings.duplexMode === 'short_edge'
                 ? 'bg-neutral-900 text-white shadow-xs'
                 : 'text-neutral-600 hover:text-neutral-900 hover:bg-white/60'
             }`}
           >
-            Borde Corto
+            {t.adjustments.duplexShort}
           </button>
           <button
             type="button"
             onClick={() => updateSetting('duplexMode', 'simplex')}
-            title="1 Cara (Simplex): Impresión de una sola cara del pliego"
+            title={t.adjustments.duplexSingleHint}
             className={`text-xs py-1.5 px-1 rounded-md font-semibold text-center transition-all cursor-pointer ${
               settings.duplexMode === 'simplex'
                 ? 'bg-neutral-900 text-white shadow-xs'
                 : 'text-neutral-600 hover:text-neutral-900 hover:bg-white/60'
             }`}
           >
-            1 Cara
+            {t.adjustments.duplexSingle}
           </button>
         </div>
       </div>
@@ -87,7 +89,7 @@ export const AdjustmentsTab: React.FC<AdjustmentsTabProps> = ({
         <div className="flex items-center gap-1.5 pb-1.5 border-b border-neutral-200/70">
           <Sliders className="w-3.5 h-3.5 text-neutral-700" />
           <span className="text-xs uppercase tracking-wider font-bold text-neutral-800">
-            Escala y Redimensionamiento
+            {t.adjustments.scalingTitle}
           </span>
         </div>
 
@@ -101,9 +103,9 @@ export const AdjustmentsTab: React.FC<AdjustmentsTabProps> = ({
                 ? 'bg-neutral-900 text-white shadow-xs'
                 : 'text-neutral-600 hover:text-neutral-900 hover:bg-white/60'
             }`}
-            title="Ajustar proporcionalmente sin recortar"
+            title={t.adjustments.scaleFitHint}
           >
-            Ajustar
+            {t.adjustments.scaleFitShort}
           </button>
           <button
             type="button"
@@ -113,9 +115,9 @@ export const AdjustmentsTab: React.FC<AdjustmentsTabProps> = ({
                 ? 'bg-neutral-900 text-white shadow-xs'
                 : 'text-neutral-600 hover:text-neutral-900 hover:bg-white/60'
             }`}
-            title="Llenar casilla completa"
+            title={t.adjustments.scaleFillHint}
           >
-            Llenar
+            {t.adjustments.scaleFillShort}
           </button>
           <button
             type="button"
@@ -125,9 +127,9 @@ export const AdjustmentsTab: React.FC<AdjustmentsTabProps> = ({
                 ? 'bg-neutral-900 text-white shadow-xs'
                 : 'text-neutral-600 hover:text-neutral-900 hover:bg-white/60'
             }`}
-            title="Tamaño 100% original exacto"
+            title={t.adjustments.scale100Hint}
           >
-            100%
+            {t.adjustments.scale100Short}
           </button>
           <button
             type="button"
@@ -137,9 +139,9 @@ export const AdjustmentsTab: React.FC<AdjustmentsTabProps> = ({
                 ? 'bg-neutral-900 text-white shadow-xs'
                 : 'text-neutral-600 hover:text-neutral-900 hover:bg-white/60'
             }`}
-            title="Porcentaje manual"
+            title={t.adjustments.scaleManualHint}
           >
-            Manual
+            {t.adjustments.scaleManualShort}
           </button>
         </div>
 
@@ -181,12 +183,12 @@ export const AdjustmentsTab: React.FC<AdjustmentsTabProps> = ({
         <div className="flex items-center gap-1.5 pb-1.5 border-b border-neutral-200/70">
           <RotateCw className="w-3.5 h-3.5 text-neutral-700" />
           <span className="text-xs uppercase tracking-wider font-bold text-neutral-800">
-            Rotación de Páginas
+            {t.adjustments.rotationTitle}
           </span>
         </div>
 
         <div className="flex flex-col gap-1">
-          <label className="text-[11px] font-medium text-neutral-600">Ángulo Base de Página</label>
+          <label className="text-[11px] font-medium text-neutral-600">{t.adjustments.baseAngle}</label>
           <div className="grid grid-cols-4 gap-1 bg-neutral-200/60 p-1 rounded-lg">
             {([0, 90, 180, 270] as const).map((angle) => (
               <button
@@ -217,10 +219,10 @@ export const AdjustmentsTab: React.FC<AdjustmentsTabProps> = ({
           <div className="flex flex-col">
             <span className="text-xs text-neutral-800 font-semibold flex items-center gap-1">
               <Sparkles className="w-3 h-3 text-amber-500" />
-              Auto-rotar 90° para optimizar espacio
+              {t.adjustments.autoRotateToFit}
             </span>
             <span className="text-[10px] text-neutral-400">
-              Gira automáticamente si la orientación de la celda es opuesta
+              {t.adjustments.autoRotateDesc}
             </span>
           </div>
         </label>

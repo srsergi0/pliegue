@@ -29,6 +29,7 @@ const PDFPageThumbnail: React.FC<PDFPageThumbnailProps> = ({
   cellHeightMm,
   settings,
 }) => {
+  const { t } = useI18n();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -155,7 +156,7 @@ const PDFPageThumbnail: React.FC<PDFPageThumbnailProps> = ({
         </div>
       )}
       {error ? (
-        <div className="text-xs text-red-500 text-center p-2">Error de renderizado</div>
+        <div className="text-xs text-red-500 text-center p-2">{t.preview.renderError}</div>
       ) : (
         <canvas
           ref={canvasRef}
@@ -232,9 +233,9 @@ export const ImpositionPreview: React.FC<ImpositionPreviewProps> = ({
     return (
       <div className="h-full min-h-[400px] flex flex-col items-center justify-center bg-neutral-50 border border-dashed border-neutral-200 rounded-xl p-8 text-center text-neutral-400 select-none">
         <Eye className="w-12 h-12 stroke-[1.25] text-neutral-300 mb-3" />
-        <p className="text-sm font-medium text-neutral-600 mb-1">Previsualización del Pliego</p>
+        <p className="text-sm font-medium text-neutral-600 mb-1">{t.preview.emptyTitle}</p>
         <p className="text-xs max-w-sm text-neutral-400">
-          Carga un archivo PDF en el panel izquierdo para visualizar la imposición, el orden de páginas y las marcas de corte en tiempo real.
+          {t.preview.emptyDesc}
         </p>
       </div>
     );
@@ -352,10 +353,49 @@ export const ImpositionPreview: React.FC<ImpositionPreviewProps> = ({
 
   // Helper to get visual head label and arrow depending on cell rotation
   const getHeadIndicator = (angle: number) => {
-    if (angle === 0) return { arrow: '▲', label: 'CABEZA ARRIBA (0°)' };
-    if (angle === 90) return { arrow: '►', label: 'CABEZA DERECHA (90° Horario)' };
-    if (angle === 180) return { arrow: '▼', label: 'CABEZA ABAJO (180° Invertido)' };
-    return { arrow: '◄', label: 'CABEZA IZQUIERDA (270° Antihorario)' };
+    if (angle === 0) return { arrow: '▲', label: t.preview.headUp };
+    if (angle === 90) return { arrow: '►', label: t.preview.headRight };
+    if (angle === 180) return { arrow: '▼', label: t.preview.headDown };
+    return { arrow: '◄', label: t.preview.headLeft };
+  };
+
+  // Renders the orientation guide with highlighted keywords ({flip} / {light})
+  const renderOrientationDesc = () => {
+    const parts = t.preview.orientationDesc.split(/(\{flip\}|\{light\})/g);
+    return parts.map((part, i) => {
+      if (part === '{flip}') {
+        return <strong key={i} className="text-neutral-700 font-semibold">{t.preview.flipWord}</strong>;
+      }
+      if (part === '{light}') {
+        return <strong key={i} className="text-amber-800 font-semibold">{t.preview.lightWord}</strong>;
+      }
+      return <span key={i}>{part}</span>;
+    });
+  };
+
+  // Helper to build page badges (Pág. N, halves, courtesy / blank)
+  const pageLabelFor = (
+    sourcePageIndex: number | null,
+    pagePart: PagePart | undefined,
+    isSpacerBlank: boolean | undefined
+  ) => {
+    let label = sourcePageIndex !== null
+      ? `${t.preview.pageAbbr} ${sourcePageIndex + 1}`
+      : isSpacerBlank ? t.preview.courtesy : t.preview.blank;
+    if (pagePart === 'left_half') {
+      label += t.preview.leftHalf;
+    } else if (pagePart === 'right_half') {
+      label += t.preview.rightHalf;
+    }
+    return label;
+  };
+
+  const courtesyLabelFor = (spacerReason: string | undefined) => {
+    if (spacerReason === 'spread_alignment_start') return t.preview.courtesyAlign;
+    if (spacerReason === 'front_cover_inside') return t.preview.courtesyFrontCover;
+    if (spacerReason === 'back_cover_inside') return t.preview.courtesyBackCover;
+    if (spacerReason === 'signature_padding') return t.preview.courtesyPadding;
+    return t.preview.courtesyDefault;
   };
 
   // Calculate mathematically exact fold and cut lines derived from actual cell coordinates
@@ -383,7 +423,7 @@ export const ImpositionPreview: React.FC<ImpositionPreviewProps> = ({
         verticalLines.push({
           xPct,
           isFold,
-          label: isFold ? 'Lomo / Doblez' : 'Corte Guillotina',
+          label: isFold ? t.preview.spineFold : t.preview.guillotineCut,
         });
       }
     }
@@ -401,13 +441,13 @@ export const ImpositionPreview: React.FC<ImpositionPreviewProps> = ({
         horizontalLines.push({
           yPct,
           isFold: isFrenchFold,
-          label: isFrenchFold ? 'Doblez en cruz' : 'Corte Guillotina',
+          label: isFrenchFold ? t.preview.crossFold : t.preview.guillotineCut,
         });
       }
     }
 
     return { verticalLines, horizontalLines };
-  }, [settings.layoutMode, settings.booklet4UpMode, activeSheet, sheetW, sheetH]);
+  }, [settings.layoutMode, settings.booklet4UpMode, activeSheet, sheetW, sheetH, t.preview.spineFold, t.preview.guillotineCut, t.preview.crossFold]);
 
   return (
     <div className="flex flex-col h-full bg-neutral-50/60 p-5 rounded-xl border border-neutral-200">
@@ -431,7 +471,7 @@ export const ImpositionPreview: React.FC<ImpositionPreviewProps> = ({
               )}
             </div>
             <p className="text-[11px] text-neutral-500 mt-0.5 font-medium">
-              {t.preview.sheetOf} {currentSheetIdx + 1} {t.preview.totalSheets} {plan.length} • Hoja {settings.sheetPreset} ({sheetW} × {sheetH} mm) • {activeSheet.cells.length} casillas ({activeSheet.cells[0] ? `${activeSheet.cells[0].width.toFixed(1)} × ${activeSheet.cells[0].height.toFixed(1)} mm` : ''})
+              {t.preview.sheetOf} {currentSheetIdx + 1} {t.preview.totalSheets} {plan.length} • {t.preview.sheetWord} {settings.sheetPreset} ({sheetW} × {sheetH} mm) • {activeSheet.cells.length} {t.preview.cellsWord} ({activeSheet.cells[0] ? `${activeSheet.cells[0].width.toFixed(1)} × ${activeSheet.cells[0].height.toFixed(1)} mm` : ''})
             </p>
           </div>
         </div>
@@ -443,11 +483,11 @@ export const ImpositionPreview: React.FC<ImpositionPreviewProps> = ({
               <button
                 onClick={toggleFlipSide}
                 className="flex items-center gap-1.5 text-xs font-medium text-neutral-700 hover:bg-neutral-100 px-2.5 py-1.5 rounded-md transition-colors"
-                title={`Cambiar vista al ${activeSheet.side === 'front' ? 'Reverso / Retiro' : 'Anverso / Tiro'}`}
+                title={activeSheet.side === 'front' ? t.preview.flipTitleToBack : t.preview.flipTitleToFront}
                 id="btn-toggle-flip"
               >
                 <ArrowRightLeft className="w-3.5 h-3.5 text-neutral-500" />
-                <span>Voltear a <strong className="font-semibold text-neutral-900">{activeSheet.side === 'front' ? 'Reverso' : 'Anverso'}</strong></span>
+                <span>{t.preview.flipTo} <strong className="font-semibold text-neutral-900">{activeSheet.side === 'front' ? t.preview.backShort : t.preview.frontShort}</strong></span>
               </button>
 
               <div className="w-[1px] h-4 bg-neutral-200 mx-0.5" />
@@ -476,7 +516,7 @@ export const ImpositionPreview: React.FC<ImpositionPreviewProps> = ({
               onClick={prevSheet}
               disabled={currentSheetIdx === 0}
               className="p-1 rounded-md hover:bg-neutral-100 disabled:opacity-30 disabled:hover:bg-transparent transition-colors text-neutral-600"
-              title="Pliego anterior"
+              title={t.preview.prevSheet}
               id="btn-prev-sheet"
             >
               <ChevronLeft className="w-4 h-4" />
@@ -492,9 +532,9 @@ export const ImpositionPreview: React.FC<ImpositionPreviewProps> = ({
                 onBlur={() => commitSheetChange(sheetInput)}
                 onKeyDown={handleSheetInputKeyDown}
                 className="w-11 h-6 text-center text-xs font-mono font-bold text-neutral-900 bg-neutral-100/90 hover:bg-neutral-200/60 focus:bg-white border border-neutral-300 focus:border-neutral-900 focus:ring-1 focus:ring-neutral-900 rounded px-0.5 outline-hidden transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none cursor-text"
-                title="Escribe un número de pliego para saltar rápidamente (Enter o flechas arriba/abajo)"
+                title={t.preview.sheetInputTitle}
                 id="input-sheet-number"
-                aria-label="Número de pliego actual"
+                aria-label={t.preview.sheetInputAria}
               />
               <span className="text-xs font-mono font-medium text-neutral-400">
                 / {plan.length}
@@ -505,7 +545,7 @@ export const ImpositionPreview: React.FC<ImpositionPreviewProps> = ({
               onClick={nextSheet}
               disabled={currentSheetIdx === plan.length - 1}
               className="p-1 rounded-md hover:bg-neutral-100 disabled:opacity-30 disabled:hover:bg-transparent transition-colors text-neutral-600"
-              title="Siguiente pliego"
+              title={t.preview.nextSheet}
               id="btn-next-sheet"
             >
               <ChevronRight className="w-4 h-4" />
@@ -534,7 +574,7 @@ export const ImpositionPreview: React.FC<ImpositionPreviewProps> = ({
             {showLightTable && pairedSheet && (
               <div className="absolute top-2 right-2 bg-amber-900/90 text-amber-100 text-[10px] font-mono px-2 py-0.5 rounded-xs shadow-md backdrop-blur-xs flex items-center gap-1.5 z-40 pointer-events-none select-none border border-amber-600/40">
                 <Sun className="w-3 h-3 text-amber-400 animate-spin" style={{ animationDuration: '8s' }} />
-                <span>MESA DE LUZ ACTIVA · Calce de {pairedSheet.side === 'front' ? 'Tiro' : 'Retiro'} a contraluz</span>
+                <span>{t.preview.lightTableActive.replace('{side}', pairedSheet.side === 'front' ? t.preview.inkFront : t.preview.inkBack)}</span>
               </div>
             )}
 
@@ -577,12 +617,7 @@ export const ImpositionPreview: React.FC<ImpositionPreviewProps> = ({
                   const pCellHPercent = (pCell.height / sheetH) * 100;
 
                   const pHasPage = pCell.sourcePageIndex !== null;
-                  let pPageLabel = pHasPage ? `Pág. ${pCell.sourcePageIndex! + 1}` : (pCell.isSpacerBlank ? 'Cortesía' : 'Blanco');
-                  if (pCell.pagePart === 'left_half') {
-                    pPageLabel += ' (Izq)';
-                  } else if (pCell.pagePart === 'right_half') {
-                    pPageLabel += ' (Der)';
-                  }
+                  const pPageLabel = pageLabelFor(pCell.sourcePageIndex, pCell.pagePart, pCell.isSpacerBlank);
 
                   return (
                     <div
@@ -618,7 +653,7 @@ export const ImpositionPreview: React.FC<ImpositionPreviewProps> = ({
                         }}
                       >
                         <span className="font-bold">
-                          {pairedSheet.side === 'front' ? 'Tiro' : 'Retiro'}: {pPageLabel}
+                          {pairedSheet.side === 'front' ? t.preview.inkFront : t.preview.inkBack}: {pPageLabel}
                         </span>
                         {pHasPage && <span className="opacity-80">({pCell.rotation}°)</span>}
                       </div>
@@ -642,12 +677,7 @@ export const ImpositionPreview: React.FC<ImpositionPreviewProps> = ({
               const cellHPercent = (cell.height / sheetH) * 100;
 
               const hasPage = cell.sourcePageIndex !== null;
-              let pageLabel = hasPage ? `Pág. ${cell.sourcePageIndex! + 1}` : (cell.isSpacerBlank ? 'Cortesía' : 'Blanco');
-              if (cell.pagePart === 'left_half') {
-                pageLabel += ' (Izq)';
-              } else if (cell.pagePart === 'right_half') {
-                pageLabel += ' (Der)';
-              }
+              const pageLabel = pageLabelFor(cell.sourcePageIndex, cell.pagePart, cell.isSpacerBlank);
               const headInfo = getHeadIndicator(cell.rotation);
 
               return (
@@ -674,7 +704,7 @@ export const ImpositionPreview: React.FC<ImpositionPreviewProps> = ({
                     <div className="absolute top-1 right-1 z-30 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
                       <span className="flex items-center gap-1 bg-rose-600 text-white text-[9px] font-medium px-1.5 py-0.5 rounded shadow-xs">
                         <EyeOff className="w-2.5 h-2.5" />
-                        <span>Desactivar</span>
+                        <span>{t.preview.deactivate}</span>
                       </span>
                     </div>
                   )}
@@ -699,18 +729,10 @@ export const ImpositionPreview: React.FC<ImpositionPreviewProps> = ({
                       <span className="z-10 text-[10px] font-mono uppercase tracking-wider">
                         {cell.isSpacerBlank ? (
                           <span className="text-amber-800 bg-amber-100/90 border border-amber-300 px-1.5 py-0.5 rounded text-[8.5px] font-bold shadow-2xs">
-                            {cell.spacerReason === 'spread_alignment_start'
-                              ? 'Cortesía (Alineación inicial)'
-                              : cell.spacerReason === 'front_cover_inside'
-                              ? 'Cortesía (Interior portada)'
-                              : cell.spacerReason === 'back_cover_inside'
-                              ? 'Cortesía (Interior contraportada)'
-                              : cell.spacerReason === 'signature_padding'
-                              ? 'Cortesía (Ajuste de pliego)'
-                              : 'Página de cortesía'}
+                            {courtesyLabelFor(cell.spacerReason)}
                           </span>
                         ) : (
-                          <span className="text-neutral-400">Página en blanco</span>
+                          <span className="text-neutral-400">{t.preview.blankPage}</span>
                         )}
                       </span>
                     </div>
@@ -731,7 +753,7 @@ export const ImpositionPreview: React.FC<ImpositionPreviewProps> = ({
                       title={headInfo.label}
                     >
                       <span>{headInfo.arrow}</span>
-                      <span>CAB</span>
+                      <span>{t.preview.headAbbr}</span>
                     </div>
                   )}
                 </div>
@@ -907,14 +929,14 @@ export const ImpositionPreview: React.FC<ImpositionPreviewProps> = ({
                       {/* Hover restore overlay */}
                       <div className="absolute inset-0 bg-emerald-700/70 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center gap-0.5 transition-opacity rounded text-white">
                         <RotateCcw className="w-4 h-4" />
-                        <span className="text-[8px] font-bold uppercase tracking-wider">Reactivar</span>
+                        <span className="text-[8px] font-bold uppercase tracking-wider">{t.preview.reactivate}</span>
                       </div>
                     </div>
 
                     {/* Page label and restore button */}
                     <div className="flex items-center justify-between w-full mt-1.5 px-0.5">
                       <span className="text-[10px] font-bold font-mono text-neutral-700">
-                        Pág. {pageIdx + 1}
+                        {t.preview.pageAbbr} {pageIdx + 1}
                       </span>
                       <span className="text-[10px] text-emerald-600 font-bold group-hover:scale-125 transition-transform">
                         ↺
@@ -932,10 +954,10 @@ export const ImpositionPreview: React.FC<ImpositionPreviewProps> = ({
         <Info className="w-4 h-4 text-neutral-400 shrink-0 mt-0.5" />
         <div className="leading-relaxed">
           <p className="font-semibold text-neutral-700 mb-0.5">
-            Orientación de Impresión (▲ CAB = Cabeza / Encabezado del documento original):
+            {t.preview.orientationTitle.replace('{head}', t.preview.headAbbr)}
           </p>
           <p className="text-[11px] text-neutral-500">
-            La flecha indica la parte superior física del diseño. En modo doble cara (dúplex), puedes pulsar <strong className="text-neutral-700 font-semibold">Voltear</strong> para alternar entre tiro y retiro, o activar <strong className="text-amber-800 font-semibold">Trasluz</strong> para inspeccionar el registro y calce front-to-back a contraluz como en una mesa de luz de preimpresión.
+            {renderOrientationDesc()}
           </p>
         </div>
       </div>

@@ -78,7 +78,7 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
         onChangeTab={setActiveTab}
         layoutBadge={`${settings.gridCols}×${settings.gridRows}`}
         duplexBadge={settings.duplexMode === 'simplex' ? '1C' : '2C'}
-        marginBadge={settings.drawCropMarks ? 'Guía' : undefined}
+        marginBadge={settings.drawCropMarks ? t.tabs.guideBadge : undefined}
       />
 
       {/* 3. Contenedor de Pestañas con Transición Suave */}

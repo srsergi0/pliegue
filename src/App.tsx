@@ -8,6 +8,8 @@ import { TemplatesModal } from './components/TemplatesModal';
 import { LanguageSelector } from './components/LanguageSelector';
 import { UpdateBanner } from './components/UpdateBanner';
 import { WORKSHOP_PRESETS, JobTemplate } from './constants/jobPresets';
+import { loadCustomTemplates, persistCustomTemplates, buildCustomTemplate } from './utils/customTemplates';
+import { en as enFallback } from './i18n/locales/en';
 import { useI18n } from './i18n/I18nContext';
 import {
   Upload,
@@ -73,6 +75,7 @@ export default function App() {
   const [savedFilePath, setSavedFilePath] = useState<string | null>(null);
   const [isTemplatesOpen, setIsTemplatesOpen] = useState(false);
   const [toastMsg, setToastMsg] = useState<string | null>(null);
+  const [customTemplates, setCustomTemplates] = useState<JobTemplate[]>(() => loadCustomTemplates());
 
   const hiddenFileInputRef = useRef<HTMLInputElement>(null);
   const isElectron = typeof window !== 'undefined' && !!window.electronAPI?.isElectron;
@@ -82,8 +85,34 @@ export default function App() {
       ...prev,
       ...tmpl.settings,
     }));
-    setToastMsg(`✓ ${t.actions.appliedTemplate}: ${tmpl.title}`);
+    const displayTitle = t.templates.presets[tmpl.id]?.title ?? tmpl.title;
+    setToastMsg(`✓ ${t.actions.appliedTemplate}: ${displayTitle}`);
     setTimeout(() => setToastMsg(null), 3500);
+  };
+
+  const handleSaveCustomTemplate = (name: string): string | null => {
+    const clean = name.trim();
+    if (!clean) return t.templates.nameRequired;
+    const exists = customTemplates.some(
+      (tmpl) => tmpl.title.toLowerCase() === clean.toLowerCase()
+    );
+    if (exists) return t.templates.nameExists;
+    const created = buildCustomTemplate(clean, { ...settings }, {
+      badge: t.templates.customBadge,
+      prefix: t.templates.customDescPrefix,
+    });
+    const next = [created, ...customTemplates];
+    setCustomTemplates(next);
+    persistCustomTemplates(next);
+    setToastMsg(`✓ ${t.actions.savedTemplate}: ${clean}`);
+    setTimeout(() => setToastMsg(null), 3500);
+    return null;
+  };
+
+  const handleDeleteCustomTemplate = (id: string) => {
+    const next = customTemplates.filter((tmpl) => tmpl.id !== id);
+    setCustomTemplates(next);
+    persistCustomTemplates(next);
   };
 
   const handleOpenAnotherFile = () => {
@@ -109,7 +138,7 @@ export default function App() {
       const pageCount = doc.numPages;
 
       if (pageCount === 0) {
-        throw new Error('El PDF no tiene páginas válidas.');
+        throw new Error(t.errors.invalidPdf);
       }
 
       const pages: { width: number; height: number }[] = [];
@@ -212,8 +241,19 @@ export default function App() {
       const bytes = new Uint8Array(arrayBuffer);
       await processPDFBytes(bytes, file.name, file.size);
     } else {
-      setErrorMsg('Por favor arrastra únicamente archivos con formato PDF.');
+      setErrorMsg(t.errors.dragOnlyPdf);
     }
+  };
+
+  // Standard PDF fonts (Helvetica) only support WinAnsi (Latin) encoding,
+  // so CJK sample strings must fall back to English to avoid a crash.
+  const winAnsiSafe = (text: string): boolean => {
+    for (const ch of text) {
+      const code = ch.codePointAt(0) ?? 0;
+      if (code > 0xff) return false;
+      if (code >= 0x80 && code <= 0x9f) return false;
+    }
+    return true;
   };
 
   // Programmatically generate a sample PDF (8 or 16 pages) to allow instant testing
@@ -225,6 +265,13 @@ export default function App() {
       const { PDFDocument, rgb, StandardFonts } = await import('pdf-lib');
       const pdfDoc = await PDFDocument.create();
       const font = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+
+      // Fall back to English when the current language uses non-Latin glyphs
+      const pickSafe = (localized: string, fallback: string) =>
+        winAnsiSafe(localized) ? localized : fallback;
+      const pageWord = pickSafe(t.welcome.samplePageWord, enFallback.welcome.samplePageWord);
+      const docTitle = pickSafe(t.welcome.sampleTitle, enFallback.welcome.sampleTitle);
+      const docSubtitle = pickSafe(t.welcome.sampleSubtitle, enFallback.welcome.sampleSubtitle);
 
       const colors = [
         rgb(0.96, 0.96, 0.96), // soft silver
@@ -258,7 +305,7 @@ export default function App() {
           borderWidth: 1,
         });
 
-        page.drawText(`PÁGINA ${i}`, {
+        page.drawText(`${pageWord} ${i}`, {
           x: 180,
           y: 440,
           size: 40,
@@ -266,7 +313,7 @@ export default function App() {
           color: rgb(0.12, 0.12, 0.12),
         });
 
-        page.drawText(`DOCUMENTO DE PRUEBA DE IMPOSICIÓN`, {
+        page.drawText(docTitle, {
           x: 110,
           y: 400,
           size: 11,
@@ -274,7 +321,7 @@ export default function App() {
           color: rgb(0.4, 0.4, 0.4),
         });
 
-        page.drawText(`Fidelidad de corte e imposición digital en tiempo real`, {
+        page.drawText(docSubtitle, {
           x: 130,
           y: 80,
           size: 9,
@@ -287,7 +334,7 @@ export default function App() {
       await processPDFBytes(bytes, `documento_prueba_imposicion_${pageCount}p.pdf`, bytes.length);
     } catch (err: any) {
       console.error(err);
-      setErrorMsg('Error al generar el documento de demostración.');
+      setErrorMsg(t.errors.demoFailed);
     } finally {
       setParsing(false);
     }
@@ -307,8 +354,24 @@ export default function App() {
 
   // Compute imposition plan reactively based on settings and loaded PDF
   const plan: ImposedSheet[] = useMemo(() => {
-    return generateImpositionPlan(settings, sourcePDFInfo);
-  }, [settings, sourcePDFInfo]);
+    return generateImpositionPlan(settings, sourcePDFInfo, {
+      sheet: t.sheets.sheet,
+      front: t.sheets.front,
+      back: t.sheets.back,
+      pressFront: t.sheets.pressFront,
+      pressBack: t.sheets.pressBack,
+      faceFront: t.sheets.faceFront,
+      faceBack: t.sheets.faceBack,
+      crossFold8: t.sheets.crossFold8,
+      twinBooklets: t.sheets.twinBooklets,
+      signaturesOf: t.sheets.signaturesOf,
+      bookletCutNest: t.sheets.bookletCutNest,
+      cutAndStack: t.sheets.cutAndStack,
+      repeatedPage: t.sheets.repeatedPage,
+      repeatedSheet: t.sheets.repeatedSheet,
+      sheetOf: t.sheets.sheetOf,
+    });
+  }, [settings, sourcePDFInfo, t]);
 
   // Exportar PDF imposicionado (Nativo en Electron o Descarga en Web)
   const handleExportFinalPDF = async () => {
@@ -341,7 +404,7 @@ export default function App() {
       }
     } catch (err) {
       console.error('Error al exportar PDF:', err);
-      setErrorMsg('Error al ensamblar el PDF final. Verifica los parámetros de márgenes o grilla.');
+      setErrorMsg(t.errors.exportFailed);
     } finally {
       setExporting(false);
     }
@@ -594,30 +657,33 @@ export default function App() {
                 <Sparkles className="w-3 h-3 text-amber-500" />
                 <span>{t.welcome.popularTemplates}</span>
               </span>
-              {WORKSHOP_PRESETS.slice(0, 4).map((tmpl) => (
-                <button
-                  key={tmpl.id}
-                  type="button"
-                  onClick={() => handleApplyTemplate(tmpl)}
-                  className="flex items-center gap-1.5 text-xs font-medium text-neutral-700 bg-white hover:bg-neutral-100 border border-neutral-200/90 px-2.5 py-1.5 rounded-lg shadow-2xs transition-all cursor-pointer"
-                  title={tmpl.description}
-                >
-                  <span>{tmpl.icon}</span>
-                  <span>{tmpl.badge}</span>
-                </button>
-              ))}
+              {WORKSHOP_PRESETS.slice(0, 4).map((tmpl) => {
+                const loc = t.templates.presets[tmpl.id];
+                return (
+                  <button
+                    key={tmpl.id}
+                    type="button"
+                    onClick={() => handleApplyTemplate(tmpl)}
+                    className="flex items-center gap-1.5 text-xs font-medium text-neutral-700 bg-white hover:bg-neutral-100 border border-neutral-200/90 px-2.5 py-1.5 rounded-lg shadow-2xs transition-all cursor-pointer"
+                    title={loc?.description ?? tmpl.description}
+                  >
+                    <span>{tmpl.icon}</span>
+                    <span>{loc?.badge ?? tmpl.badge}</span>
+                  </button>
+                );
+              })}
               <button
                 type="button"
                 onClick={() => setIsTemplatesOpen(true)}
                 className="text-xs font-bold text-amber-800 hover:text-amber-900 bg-amber-50 hover:bg-amber-100 px-2.5 py-1.5 rounded-lg border border-amber-200/80 transition-colors cursor-pointer"
               >
-                Ver todas →
+                {t.welcome.viewAll} →
               </button>
             </div>
 
             {/* Demo test section */}
             <div className="mt-6 flex flex-col items-center gap-2 select-none">
-              <span className="text-[11px] text-neutral-400">¿No tienes un PDF a mano para probar?</span>
+              <span className="text-[11px] text-neutral-400">{t.welcome.noPdfPrompt}</span>
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => handleLoadSamplePDF(8)}
@@ -626,7 +692,7 @@ export default function App() {
                   id="btn-sample-pdf-8"
                 >
                   <FileCode className="w-3.5 h-3.5 text-neutral-500" />
-                  <span>Generar PDF de prueba (8 páginas)</span>
+                  <span>{t.welcome.generate8}</span>
                 </button>
                 <button
                   onClick={() => handleLoadSamplePDF(16)}
@@ -635,7 +701,7 @@ export default function App() {
                   id="btn-sample-pdf-16"
                 >
                   <FileCode className="w-3.5 h-3.5 text-neutral-500" />
-                  <span>Generar PDF de prueba (16 páginas)</span>
+                  <span>{t.welcome.generate16}</span>
                 </button>
               </div>
             </div>
@@ -691,6 +757,9 @@ export default function App() {
         onClose={() => setIsTemplatesOpen(false)}
         currentSettings={settings}
         onApplyTemplate={handleApplyTemplate}
+        customTemplates={customTemplates}
+        onSaveCustom={handleSaveCustomTemplate}
+        onDeleteCustom={handleDeleteCustomTemplate}
       />
 
       {/* Floating Toast Notification */}

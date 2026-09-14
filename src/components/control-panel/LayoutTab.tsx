@@ -126,6 +126,23 @@ export const LayoutTab: React.FC<LayoutTabProps> = ({
 
   const currentTarget = resolveTargetPageDimensions(settings, sourcePDFInfo);
 
+  const targetPresetLabel = (name: TargetPagePreset, fallback: string) => {
+    switch (name) {
+      case 'auto': return t.layout.autoOption;
+      case 'original': return t.layout.originalOption;
+      case 'Custom': return t.layout.customOption;
+      case 'A5': return t.layout.tpA5;
+      case 'A6': return t.layout.tpA6;
+      case 'A7': return t.layout.tpA7;
+      case 'A8': return t.layout.tpA8;
+      case 'HalfLetter': return t.layout.tpHalfLetter;
+      case 'BusinessCard_90x50': return t.layout.tpBusinessCard;
+      case 'Card_85x55': return t.layout.tpCard85;
+      case 'Photo_100x150': return t.layout.tpPhoto;
+      default: return fallback;
+    }
+  };
+
   const virtualPages = useMemo(
     () => buildVirtualPageList(settings, sourcePDFInfo),
     [settings, sourcePDFInfo]
@@ -144,7 +161,7 @@ export const LayoutTab: React.FC<LayoutTabProps> = ({
           <div className="flex items-center gap-1.5">
             <Layers className="w-3.5 h-3.5 text-neutral-700" />
             <span className="text-xs uppercase tracking-wider font-bold text-neutral-800">
-              Hoja de Impresión (Pliego)
+              {t.layout.sheetSection}
             </span>
           </div>
           <span className="text-[10px] text-neutral-600 font-mono font-medium bg-white px-1.5 py-0.5 rounded border border-neutral-200/70">
@@ -154,7 +171,7 @@ export const LayoutTab: React.FC<LayoutTabProps> = ({
 
         {/* Tamaño del papel */}
         <div className="flex flex-col gap-1">
-          <label className="text-[11px] font-medium text-neutral-600">Formato de Pliego</label>
+          <label className="text-[11px] font-medium text-neutral-600">{t.layout.sheetFormat}</label>
           <select
             value={settings.sheetPreset}
             onChange={handleSheetPresetChange}
@@ -166,13 +183,13 @@ export const LayoutTab: React.FC<LayoutTabProps> = ({
                 {p.label}
               </option>
             ))}
-            <option value="Custom">Personalizado (mm)...</option>
+            <option value="Custom">{t.layout.customSheetOption}</option>
           </select>
         </div>
 
         {/* Orientación con botones claros */}
         <div className="flex flex-col gap-1">
-          <label className="text-[11px] font-medium text-neutral-600">Orientación del Pliego</label>
+          <label className="text-[11px] font-medium text-neutral-600">{t.layout.sheetOrientationLabel}</label>
           <div className="grid grid-cols-2 gap-1.5 bg-neutral-200/60 p-1 rounded-lg">
             <button
               type="button"
@@ -183,7 +200,7 @@ export const LayoutTab: React.FC<LayoutTabProps> = ({
                   : 'text-neutral-600 hover:text-neutral-900 hover:bg-white/60'
               }`}
             >
-              <span>Horizontal</span>
+              <span>{t.layout.landscape}</span>
               <span className="text-[10px] opacity-70">▭</span>
             </button>
             <button
@@ -195,7 +212,7 @@ export const LayoutTab: React.FC<LayoutTabProps> = ({
                   : 'text-neutral-600 hover:text-neutral-900 hover:bg-white/60'
               }`}
             >
-              <span>Vertical</span>
+              <span>{t.layout.portrait}</span>
               <span className="text-[10px] opacity-70">▯</span>
             </button>
           </div>
@@ -205,7 +222,7 @@ export const LayoutTab: React.FC<LayoutTabProps> = ({
         {settings.sheetPreset === 'Custom' && (
           <div className="grid grid-cols-2 gap-2 p-2.5 bg-white rounded-lg border border-neutral-200">
             <div className="flex flex-col gap-1">
-              <label className="text-[10px] text-neutral-500 font-mono">Ancho pliego (mm)</label>
+              <label className="text-[10px] text-neutral-500 font-mono">{t.layout.sheetWidthCustom}</label>
               <input
                 type="number"
                 value={settings.sheetWidth}
@@ -215,7 +232,7 @@ export const LayoutTab: React.FC<LayoutTabProps> = ({
               />
             </div>
             <div className="flex flex-col gap-1">
-              <label className="text-[10px] text-neutral-500 font-mono">Alto pliego (mm)</label>
+              <label className="text-[10px] text-neutral-500 font-mono">{t.layout.sheetHeightCustom}</label>
               <input
                 type="number"
                 value={settings.sheetHeight}
@@ -233,12 +250,12 @@ export const LayoutTab: React.FC<LayoutTabProps> = ({
         <div className="flex items-center gap-1.5 pb-1.5 border-b border-neutral-200/70">
           <BookOpen className="w-3.5 h-3.5 text-neutral-700" />
           <span className="text-xs uppercase tracking-wider font-bold text-neutral-800">
-            Esquema de Distribución
+            {t.layout.distributionScheme}
           </span>
         </div>
 
         <div className="flex flex-col gap-1">
-          <label className="text-[11px] font-medium text-neutral-600">Modalidad de Imposición</label>
+          <label className="text-[11px] font-medium text-neutral-600">{t.layout.impositionMode}</label>
           <select
             value={settings.layoutMode}
             onChange={(e) => {
@@ -257,11 +274,11 @@ export const LayoutTab: React.FC<LayoutTabProps> = ({
             className="w-full bg-white border border-neutral-300 rounded-lg px-2.5 py-1.5 text-xs text-neutral-800 font-medium focus:outline-hidden focus:ring-1 focus:ring-neutral-400"
             id="layout-mode"
           >
-            <option value="booklet">📖 Folleto / Cuadernillo (Grapado al lomo / Saddle Stitch)</option>
-            <option value="duplex_sheetwise">📄 Cuadrícula Dúplex (Tiro y Retiro / Frente y Vuelta)</option>
-            <option value="cut_and_stack">📚 Corte y Apilado (Cut & Stack para guillotina)</option>
-            <option value="sequential">📑 Cuadrícula Simple (1 sola cara / Simplex)</option>
-            <option value="step_and_repeat">🏷️ Repetición (Misma página repetida / Tarjetas)</option>
+            <option value="booklet">{t.layout.modeBooklet}</option>
+            <option value="duplex_sheetwise">{t.layout.modeDuplex}</option>
+            <option value="cut_and_stack">{t.layout.modeCutStack}</option>
+            <option value="sequential">{t.layout.modeSequential}</option>
+            <option value="step_and_repeat">{t.layout.modeRepeat}</option>
           </select>
         </div>
 
@@ -270,13 +287,13 @@ export const LayoutTab: React.FC<LayoutTabProps> = ({
           <div className="flex flex-col gap-3 pt-1">
             <div className="flex flex-col gap-1.5">
               <label className="text-[11px] font-medium text-neutral-600">
-                Páginas de Folleto por Cara del Pliego:
+                {t.layout.bookletPagesPerSide}
               </label>
               <div className="grid grid-cols-3 gap-1.5">
                 {[
-                  { c: 2, r: 1, label: '2 págs (2×1)', desc: 'Medio pliego', minPages: 4 },
-                  { c: 2, r: 2, label: '4 págs (2×2)', desc: '4 en 1 pliego', minPages: 4 },
-                  { c: 4, r: 2, label: '8 págs (4×2)', desc: '8 en 1 pliego', minPages: 8 },
+                  { c: 2, r: 1, label: t.layout.booklet2up, desc: t.layout.bookletHalfSheet, minPages: 4 },
+                  { c: 2, r: 2, label: t.layout.booklet4up, desc: t.layout.booklet4in1, minPages: 4 },
+                  { c: 4, r: 2, label: t.layout.booklet8up, desc: t.layout.booklet8in1, minPages: 8 },
                 ].map((preset) => {
                   const isSelected = settings.gridCols === preset.c && settings.gridRows === preset.r;
                   const isDisabled = Boolean(sourcePDFInfo && sourcePDFInfo.pageCount < preset.minPages);
@@ -285,7 +302,7 @@ export const LayoutTab: React.FC<LayoutTabProps> = ({
                       key={preset.label}
                       type="button"
                       disabled={isDisabled}
-                      title={isDisabled ? `Requiere al menos ${preset.minPages} páginas (el documento tiene ${sourcePDFInfo?.pageCount})` : preset.desc}
+                      title={isDisabled ? t.layout.requiresAtLeast.replace('{min}', String(preset.minPages)).replace('{has}', String(sourcePDFInfo?.pageCount ?? 0)) : preset.desc}
                       onClick={() => {
                         if (isDisabled) return;
                         onChangeSettings({
@@ -305,7 +322,7 @@ export const LayoutTab: React.FC<LayoutTabProps> = ({
                     >
                       <span className="text-xs font-bold">{preset.label}</span>
                       <span className={`text-[9px] mt-0.5 truncate ${isSelected ? 'text-neutral-300' : 'text-neutral-400'}`}>
-                        {isDisabled ? 'Incompatible' : preset.desc}
+                        {isDisabled ? t.layout.incompatible : preset.desc}
                       </span>
                     </button>
                   );
@@ -319,7 +336,7 @@ export const LayoutTab: React.FC<LayoutTabProps> = ({
                 <div className="flex items-center gap-1.5 text-amber-900">
                   <Scissors className="w-3.5 h-3.5 shrink-0" />
                   <label className="text-[11px] font-bold">
-                    Corte y Encarte ({settings.gridCols * settings.gridRows} págs/pliego):
+                    {t.layout.cutAndNestTitle.replace('{count}', String(settings.gridCols * settings.gridRows))}
                   </label>
                 </div>
                 <select
@@ -328,9 +345,9 @@ export const LayoutTab: React.FC<LayoutTabProps> = ({
                   className="bg-white border border-amber-300 rounded-md px-2 py-1 text-xs text-neutral-800 font-medium focus:outline-hidden"
                   id="booklet-4up-mode"
                 >
-                  <option value="cut_and_nest">📑 Folleto Continuo (Corte central y encarte)</option>
-                  <option value="duplicate_2up">👥 2 Folletos Gemelos (2 copias idénticas)</option>
-                  <option value="french_fold">✉️ Plegado en Cruz (French Fold)</option>
+                  <option value="cut_and_nest">{t.layout.modeContinuous}</option>
+                  <option value="duplicate_2up">{t.layout.modeTwins}</option>
+                  <option value="french_fold">{t.layout.modeFrenchFold}</option>
                 </select>
               </div>
             )}
@@ -338,32 +355,32 @@ export const LayoutTab: React.FC<LayoutTabProps> = ({
             {/* Encuadernación y Firmas */}
             <div className="grid grid-cols-2 gap-2 p-2 bg-white rounded-lg border border-neutral-200/80">
               <div className="flex flex-col gap-1">
-                <label className="text-[10px] text-neutral-500 font-medium">Lomo / Encuadernación</label>
+                <label className="text-[10px] text-neutral-500 font-medium">{t.layout.spineBinding}</label>
                 <select
                   value={settings.bindingEdge}
                   onChange={(e) => updateSetting('bindingEdge', e.target.value as BindingEdge)}
                   className="bg-neutral-50 border border-neutral-200 rounded-md px-2 py-1 text-xs text-neutral-800 focus:outline-hidden font-medium"
                   id="binding-edge"
                 >
-                  <option value="left">Izquierda (Occidental)</option>
-                  <option value="right">Derecha (Oriental / Manga)</option>
+                  <option value="left">{t.layout.bindingLeftOcc}</option>
+                  <option value="right">{t.layout.bindingRightOri}</option>
                 </select>
               </div>
 
               <div className="flex flex-col gap-1">
-                <label className="text-[10px] text-neutral-500 font-medium">Tamaño de Cuadernillo</label>
+                <label className="text-[10px] text-neutral-500 font-medium">{t.layout.signatureSizeLabel}</label>
                 <select
                   value={settings.signatureSize}
                   onChange={(e) => updateSetting('signatureSize', Number(e.target.value))}
                   className="bg-neutral-50 border border-neutral-200 rounded-md px-2 py-1 text-xs text-neutral-800 focus:outline-hidden font-medium"
                   id="signature-size"
                 >
-                  <option value={0}>Todo en 1 cuadernillo</option>
+                  <option value={0}>{t.layout.allPagesInOne}</option>
                   {[
-                    { val: 4, label: '4 págs (1 pliegue / folio)' },
-                    { val: 8, label: '8 págs (2 pliegues)' },
-                    { val: 16, label: '16 págs (4 pliegues)' },
-                    { val: 32, label: '32 págs (8 pliegues)' },
+                    { val: 4, label: t.layout.sig4 },
+                    { val: 8, label: t.layout.sig8 },
+                    { val: 16, label: t.layout.sig16 },
+                    { val: 32, label: t.layout.sig32 },
                   ]
                     .filter((opt) => !sourcePDFInfo || sourcePDFInfo.pageCount >= opt.val)
                     .map((opt) => (
@@ -403,14 +420,14 @@ export const LayoutTab: React.FC<LayoutTabProps> = ({
                   <div className="flex items-center gap-1.5 text-[10px] text-indigo-700 bg-indigo-50 border border-indigo-200/80 px-2 py-1 rounded-md">
                     <Sparkles className="w-3 h-3 shrink-0 text-indigo-600" />
                     <span>
-                      {t.layout.doublePagesDetected}: <strong>{sourcePDFInfo.doublePageCount}</strong> {sourcePDFInfo.doublePageCount === 1 ? 'página' : 'páginas'}
+                      {t.layout.doublePagesDetected}: <strong>{sourcePDFInfo.doublePageCount}</strong> {sourcePDFInfo.doublePageCount === 1 ? t.layout.pageOne : t.layout.pageMany}
                     </span>
                   </div>
                   {courtesyPagesCount > 0 && (
                     <div className="flex items-center gap-1.5 text-[10px] text-amber-800 bg-amber-50 border border-amber-200/80 px-2 py-1 rounded-md">
                       <FileText className="w-3 h-3 shrink-0 text-amber-600" />
                       <span>
-                        {t.layout.courtesyPagesCount}: <strong>{courtesyPagesCount}</strong> {courtesyPagesCount === 1 ? 'página' : 'páginas'}
+                        {t.layout.courtesyPagesCount}: <strong>{courtesyPagesCount}</strong> {courtesyPagesCount === 1 ? t.layout.pageOne : t.layout.pageMany}
                       </span>
                     </div>
                   )}
@@ -426,7 +443,7 @@ export const LayoutTab: React.FC<LayoutTabProps> = ({
             <div className="flex flex-col gap-1">
               <div className="flex items-center justify-between">
                 <label className="text-[11px] font-medium text-neutral-600">
-                  Tamaño de Corte de Página
+                  {t.layout.cutSizeLabel}
                 </label>
                 {currentTarget.width > 0 && (
                   <span className="text-[10px] text-neutral-500 font-mono">
@@ -442,7 +459,7 @@ export const LayoutTab: React.FC<LayoutTabProps> = ({
               >
                 {TARGET_PAGE_PRESETS.map((p) => (
                   <option key={p.name} value={p.name}>
-                    {p.label}
+                    {targetPresetLabel(p.name, p.label)}
                   </option>
                 ))}
               </select>
@@ -452,7 +469,7 @@ export const LayoutTab: React.FC<LayoutTabProps> = ({
             {settings.targetPagePreset === 'Custom' && (
               <div className="grid grid-cols-2 gap-2 p-2 bg-white rounded-lg border border-neutral-200">
                 <div className="flex flex-col gap-1">
-                  <label className="text-[10px] text-neutral-500 font-mono">Ancho corte (mm)</label>
+                  <label className="text-[10px] text-neutral-500 font-mono">{t.layout.cutWidth}</label>
                   <input
                     type="number"
                     value={settings.targetPageWidth}
@@ -462,7 +479,7 @@ export const LayoutTab: React.FC<LayoutTabProps> = ({
                   />
                 </div>
                 <div className="flex flex-col gap-1">
-                  <label className="text-[10px] text-neutral-500 font-mono">Alto corte (mm)</label>
+                  <label className="text-[10px] text-neutral-500 font-mono">{t.layout.cutHeight}</label>
                   <input
                     type="number"
                     value={settings.targetPageHeight}
@@ -477,7 +494,7 @@ export const LayoutTab: React.FC<LayoutTabProps> = ({
             {/* Columnas y Filas */}
             <div className="grid grid-cols-2 gap-2.5">
               <div className="flex flex-col gap-1">
-                <label className="text-[11px] font-medium text-neutral-600">Columnas</label>
+                <label className="text-[11px] font-medium text-neutral-600">{t.layout.columns}</label>
                 <input
                   type="number"
                   min={1}
@@ -490,7 +507,7 @@ export const LayoutTab: React.FC<LayoutTabProps> = ({
               </div>
 
               <div className="flex flex-col gap-1">
-                <label className="text-[11px] font-medium text-neutral-600">Filas</label>
+                <label className="text-[11px] font-medium text-neutral-600">{t.layout.rows}</label>
                 <input
                   type="number"
                   min={1}
@@ -507,28 +524,28 @@ export const LayoutTab: React.FC<LayoutTabProps> = ({
             {settings.layoutMode === 'duplex_sheetwise' && (
               <div className="grid grid-cols-2 gap-2 p-2.5 bg-white rounded-lg border border-neutral-200">
                 <div className="flex flex-col gap-1">
-                  <label className="text-[10px] text-neutral-500 font-medium">Distribución Dúplex</label>
+                  <label className="text-[10px] text-neutral-500 font-medium">{t.layout.duplexDistribution}</label>
                   <select
                     value={settings.duplexItemMode}
                     onChange={(e) => updateSetting('duplexItemMode', e.target.value as DuplexItemMode)}
                     className="bg-neutral-50 border border-neutral-200 rounded-md px-2 py-1 text-xs text-neutral-700 focus:outline-hidden"
                     id="duplex-item-mode"
                   >
-                    <option value="two_page_items">2 Caras (Frente/Detrás)</option>
-                    <option value="consecutive">Consecutivo continuo</option>
+                    <option value="two_page_items">{t.layout.duplexTwoSides}</option>
+                    <option value="consecutive">{t.layout.duplexConsecutive}</option>
                   </select>
                 </div>
 
                 <div className="flex flex-col gap-1">
-                  <label className="text-[10px] text-neutral-500 font-medium">Orden de Llenado</label>
+                  <label className="text-[10px] text-neutral-500 font-medium">{t.layout.fillOrder}</label>
                   <select
                     value={settings.gridOrder}
                     onChange={(e) => updateSetting('gridOrder', e.target.value as GridOrder)}
                     className="bg-neutral-50 border border-neutral-200 rounded-md px-2 py-1 text-xs text-neutral-700 focus:outline-hidden"
                     id="grid-order"
                   >
-                    <option value="rows">Por Filas (Z)</option>
-                    <option value="columns">Por Columnas (N)</option>
+                    <option value="rows">{t.layout.fillRows}</option>
+                    <option value="columns">{t.layout.fillColumns}</option>
                   </select>
                 </div>
               </div>

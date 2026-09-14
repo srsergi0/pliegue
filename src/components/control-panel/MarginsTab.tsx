@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { ImpositionSettings } from '../../types';
 import { Crop, Link2, Unlink2, Scissors, LayoutDashboard } from 'lucide-react';
+import { useI18n } from '../../i18n/I18nContext';
 
 interface MarginsTabProps {
   settings: ImpositionSettings;
@@ -11,6 +12,7 @@ export const MarginsTab: React.FC<MarginsTabProps> = ({
   settings,
   onChangeSettings,
 }) => {
+  const { t } = useI18n();
   const [marginsLinked, setMarginsLinked] = useState<boolean>(true);
 
   const updateSetting = <K extends keyof ImpositionSettings>(
@@ -67,7 +69,7 @@ export const MarginsTab: React.FC<MarginsTabProps> = ({
           <div className="flex items-center gap-1.5">
             <LayoutDashboard className="w-3.5 h-3.5 text-neutral-700" />
             <span className="text-xs uppercase tracking-wider font-bold text-neutral-800">
-              Márgenes del Pliego
+              {t.margins.marginsSection}
             </span>
           </div>
 
@@ -89,7 +91,7 @@ export const MarginsTab: React.FC<MarginsTabProps> = ({
         {/* Botón de vincular márgenes */}
         <div className="flex items-center justify-between">
           <span className="text-[11px] font-medium text-neutral-600">
-            Ajustes independientes
+            {t.margins.independentAdjustments}
           </span>
           <button
             type="button"
@@ -103,12 +105,12 @@ export const MarginsTab: React.FC<MarginsTabProps> = ({
             {marginsLinked ? (
               <>
                 <Link2 className="w-3 h-3" />
-                <span>Vinculados</span>
+                <span>{t.margins.linked}</span>
               </>
             ) : (
               <>
                 <Unlink2 className="w-3 h-3" />
-                <span>Independientes</span>
+                <span>{t.margins.unlinked}</span>
               </>
             )}
           </button>
@@ -118,7 +120,7 @@ export const MarginsTab: React.FC<MarginsTabProps> = ({
         <div className="grid grid-cols-2 gap-2">
           {/* Arriba */}
           <div className="flex items-center justify-between bg-white border border-neutral-200/90 rounded-lg px-2.5 py-1.5 shadow-2xs">
-            <span className="text-[11px] font-medium text-neutral-500">Arriba</span>
+            <span className="text-[11px] font-medium text-neutral-500">{t.margins.top}</span>
             <div className="flex items-center gap-1">
               <input
                 type="number"
@@ -134,7 +136,7 @@ export const MarginsTab: React.FC<MarginsTabProps> = ({
 
           {/* Abajo */}
           <div className="flex items-center justify-between bg-white border border-neutral-200/90 rounded-lg px-2.5 py-1.5 shadow-2xs">
-            <span className="text-[11px] font-medium text-neutral-500">Abajo</span>
+            <span className="text-[11px] font-medium text-neutral-500">{t.margins.bottom}</span>
             <div className="flex items-center gap-1">
               <input
                 type="number"
@@ -150,7 +152,7 @@ export const MarginsTab: React.FC<MarginsTabProps> = ({
 
           {/* Izquierda */}
           <div className="flex items-center justify-between bg-white border border-neutral-200/90 rounded-lg px-2.5 py-1.5 shadow-2xs">
-            <span className="text-[11px] font-medium text-neutral-500">Izquierda</span>
+            <span className="text-[11px] font-medium text-neutral-500">{t.margins.left}</span>
             <div className="flex items-center gap-1">
               <input
                 type="number"
@@ -166,7 +168,7 @@ export const MarginsTab: React.FC<MarginsTabProps> = ({
 
           {/* Derecha */}
           <div className="flex items-center justify-between bg-white border border-neutral-200/90 rounded-lg px-2.5 py-1.5 shadow-2xs">
-            <span className="text-[11px] font-medium text-neutral-500">Derecha</span>
+            <span className="text-[11px] font-medium text-neutral-500">{t.margins.right}</span>
             <div className="flex items-center gap-1">
               <input
                 type="number"
@@ -188,7 +190,7 @@ export const MarginsTab: React.FC<MarginsTabProps> = ({
           <div className="flex items-center gap-1.5">
             <Scissors className="w-3.5 h-3.5 text-neutral-700" />
             <span className="text-xs uppercase tracking-wider font-bold text-neutral-800">
-              Separación Interior (Calles)
+              {t.margins.innerGutter}
             </span>
           </div>
 
@@ -209,7 +211,7 @@ export const MarginsTab: React.FC<MarginsTabProps> = ({
         <div className="grid grid-cols-2 gap-2">
           {/* Horizontal */}
           <div className="flex items-center justify-between bg-white border border-neutral-200/90 rounded-lg px-2.5 py-1.5 shadow-2xs">
-            <span className="text-[11px] font-medium text-neutral-500">Horizontal</span>
+            <span className="text-[11px] font-medium text-neutral-500">{t.margins.horizontalGutter}</span>
             <div className="flex items-center gap-1">
               <input
                 type="number"
@@ -225,7 +227,7 @@ export const MarginsTab: React.FC<MarginsTabProps> = ({
 
           {/* Vertical */}
           <div className="flex items-center justify-between bg-white border border-neutral-200/90 rounded-lg px-2.5 py-1.5 shadow-2xs">
-            <span className="text-[11px] font-medium text-neutral-500">Vertical</span>
+            <span className="text-[11px] font-medium text-neutral-500">{t.margins.verticalGutter}</span>
             <div className="flex items-center gap-1">
               <input
                 type="number"
@@ -245,9 +247,9 @@ export const MarginsTab: React.FC<MarginsTabProps> = ({
       <div className="p-3.5 bg-neutral-50/90 rounded-xl border border-neutral-200/90 flex flex-col gap-2.5">
         <div className="flex items-center gap-1.5 pb-1.5 border-b border-neutral-200/70">
           <Crop className="w-3.5 h-3.5 text-neutral-700" />
-          <span className="text-xs uppercase tracking-wider font-bold text-neutral-800">
-            Marcas de Corte y Guillotina
-          </span>
+            <span className="text-xs uppercase tracking-wider font-bold text-neutral-800">
+              {t.margins.cutSectionTitle}
+            </span>
         </div>
 
         <label className="flex items-center gap-2.5 p-2 bg-white rounded-lg border border-neutral-200/80 cursor-pointer select-none">
@@ -260,10 +262,10 @@ export const MarginsTab: React.FC<MarginsTabProps> = ({
           />
           <div className="flex flex-col">
             <span className="text-xs text-neutral-800 font-semibold">
-              Dibujar marcas de corte en cruz
+              {t.margins.drawCropMarks}
             </span>
             <span className="text-[10px] text-neutral-400">
-              Guías de precisión en esquinas para guillotina industrial
+              {t.margins.cutGuideDesc}
             </span>
           </div>
         </label>
@@ -271,7 +273,7 @@ export const MarginsTab: React.FC<MarginsTabProps> = ({
         {settings.drawCropMarks && (
           <div className="grid grid-cols-2 gap-2 p-2 bg-white rounded-lg border border-neutral-200">
             <div className="flex flex-col gap-1">
-              <label className="text-[10px] text-neutral-500 font-mono">Sangría / Bleed (mm)</label>
+              <label className="text-[10px] text-neutral-500 font-mono">{t.margins.bleed}</label>
               <input
                 type="number"
                 min={0}
@@ -283,7 +285,7 @@ export const MarginsTab: React.FC<MarginsTabProps> = ({
               />
             </div>
             <div className="flex flex-col gap-1">
-              <label className="text-[10px] text-neutral-500 font-mono">Largo de marca (mm)</label>
+              <label className="text-[10px] text-neutral-500 font-mono">{t.margins.markLength}</label>
               <input
                 type="number"
                 min={1}

@@ -3,11 +3,12 @@ import { ImpositionSettings } from '../types';
 export interface JobTemplate {
   id: string;
   title: string;
-  category: 'Folleto' | 'Tarjetas' | 'Flyer' | 'Libro' | 'Papelería';
+  category: 'Folleto' | 'Tarjetas' | 'Flyer' | 'Libro' | 'Papelería' | 'Personalizada';
   description: string;
   icon: string;
   badge: string;
   settings: Partial<ImpositionSettings>;
+  createdAt?: number;
 }
 
 export const WORKSHOP_PRESETS: JobTemplate[] = [
