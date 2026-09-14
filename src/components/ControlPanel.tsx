@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { ImpositionSettings, PDFSourceInfo } from '../types';
 import { FileText, FolderOpen, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { useI18n } from '../i18n/I18nContext';
 import { TabNavigation, TabType } from './control-panel/TabNavigation';
 import { LayoutTab } from './control-panel/LayoutTab';
 import { AdjustmentsTab } from './control-panel/AdjustmentsTab';
@@ -22,6 +23,7 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
   onRemoveFile,
   onOpenNewFile,
 }) => {
+  const { t } = useI18n();
   const [activeTab, setActiveTab] = useState<TabType>('layout');
 
   return (
@@ -39,7 +41,7 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
                   {sourcePDFInfo.name}
                 </p>
                 <p className="text-[10px] text-neutral-500 font-mono mt-0.5">
-                  {sourcePDFInfo.pageCount} págs • {(sourcePDFInfo.size / (1024 * 1024)).toFixed(2)} MB • {sourcePDFInfo.firstPageWidth.toFixed(0)}×{sourcePDFInfo.firstPageHeight.toFixed(0)} mm
+                  {sourcePDFInfo.pageCount} {t.preview.sourcePages} • {(sourcePDFInfo.size / (1024 * 1024)).toFixed(2)} MB • {sourcePDFInfo.firstPageWidth.toFixed(0)}×{sourcePDFInfo.firstPageHeight.toFixed(0)} mm
                 </p>
               </div>
             </div>
@@ -49,18 +51,18 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
                   type="button"
                   onClick={onOpenNewFile}
                   className="flex items-center gap-1 text-[11px] font-semibold text-neutral-700 hover:text-neutral-900 bg-white hover:bg-neutral-100 border border-neutral-200 px-2.5 py-1 rounded-md transition-all shadow-2xs cursor-pointer"
-                  title="Abrir o cambiar por otro archivo PDF directamente"
+                  title={t.actions.openAnotherTooltip}
                   id="btn-change-pdf"
                 >
                   <FolderOpen className="w-3.5 h-3.5 text-neutral-500" />
-                  <span>Cambiar</span>
+                  <span>{t.actions.openAnother}</span>
                 </button>
               )}
               <button
                 type="button"
                 onClick={onRemoveFile}
                 className="text-neutral-400 hover:text-red-600 transition-colors p-1.5 rounded-md hover:bg-red-50 cursor-pointer"
-                title="Cerrar documento actual"
+                title={t.actions.closeNotification}
                 id="btn-remove-file"
               >
                 <X className="w-4 h-4" />

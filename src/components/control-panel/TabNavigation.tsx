@@ -1,6 +1,7 @@
 import React from 'react';
 import { Layout, Sliders, Crop } from 'lucide-react';
 import { motion } from 'motion/react';
+import { useI18n } from '../../i18n/I18nContext';
 
 export type TabType = 'layout' | 'scaling' | 'margins';
 
@@ -27,24 +28,26 @@ export const TabNavigation: React.FC<TabNavigationProps> = ({
   duplexBadge,
   marginBadge,
 }) => {
+  const { t } = useI18n();
+
   const tabs: TabItem[] = [
     {
       id: 'layout',
-      label: 'Esquema',
+      label: t.tabs.layout,
       shortLabel: 'Pliego',
       icon: <Layout className="w-3.5 h-3.5 shrink-0" />,
       badge: layoutBadge,
     },
     {
       id: 'scaling',
-      label: 'Ajustes',
+      label: t.tabs.adjustments,
       shortLabel: 'Dúplex',
       icon: <Sliders className="w-3.5 h-3.5 shrink-0" />,
       badge: duplexBadge,
     },
     {
       id: 'margins',
-      label: 'Márgenes',
+      label: t.tabs.margins,
       shortLabel: 'Corte',
       icon: <Crop className="w-3.5 h-3.5 shrink-0" />,
       badge: marginBadge,

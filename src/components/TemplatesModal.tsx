@@ -1,6 +1,7 @@
 import React from 'react';
 import { WORKSHOP_PRESETS, JobTemplate } from '../constants/jobPresets';
 import { ImpositionSettings } from '../types';
+import { useI18n } from '../i18n/I18nContext';
 import { Sparkles, X, Check, ArrowRight } from 'lucide-react';
 
 interface TemplatesModalProps {
@@ -16,6 +17,7 @@ export const TemplatesModal: React.FC<TemplatesModalProps> = ({
   currentSettings,
   onApplyTemplate,
 }) => {
+  const { t } = useI18n();
   if (!isOpen) return null;
 
   return (
@@ -32,20 +34,20 @@ export const TemplatesModal: React.FC<TemplatesModalProps> = ({
             </div>
             <div>
               <h3 className="text-base font-bold text-neutral-900 tracking-tight flex items-center gap-2">
-                <span>Plantillas de Taller de 1 Clic</span>
+                <span>{t.templates.modalTitle}</span>
                 <span className="text-[10px] bg-neutral-900 text-white font-mono px-2 py-0.5 rounded-full font-semibold">
                   PRESETS
                 </span>
               </h3>
               <p className="text-xs text-neutral-500 mt-0.5">
-                Configura pliego, grilla, sangrado y marcas en 1 clic según el producto de imprenta.
+                {t.templates.modalSubtitle}
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
             className="p-1.5 rounded-lg text-neutral-400 hover:text-neutral-700 hover:bg-neutral-200/60 transition-colors cursor-pointer"
-            title="Cerrar modal"
+            title={t.templates.close}
             id="btn-close-templates-modal"
           >
             <X className="w-5 h-5" />

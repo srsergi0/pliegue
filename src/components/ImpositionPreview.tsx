@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { pdfjs } from '../utils/pdfSetup';
 import { ImpositionSettings, ImposedSheet, PDFSourceInfo } from '../types';
 import { getEffectiveSheetDimensions } from '../utils/imposition';
+import { useI18n } from '../i18n/I18nContext';
 import { Eye, ChevronLeft, ChevronRight, RefreshCw, Info, ArrowRightLeft, Scissors, Sun } from 'lucide-react';
 
 interface PDFPageThumbnailProps {
@@ -163,6 +164,7 @@ export const ImpositionPreview: React.FC<ImpositionPreviewProps> = ({
   sourcePDFInfo,
   pdfDocProxy,
 }) => {
+  const { t } = useI18n();
   const [currentSheetIdx, setCurrentSheetIdx] = useState(0);
   const [showLightTable, setShowLightTable] = useState(false);
 
@@ -327,17 +329,17 @@ export const ImpositionPreview: React.FC<ImpositionPreviewProps> = ({
               </h3>
               {activeSheet.side === 'front' && (
                 <span className="text-[10px] bg-neutral-900 text-white font-mono px-1.5 py-0.5 rounded-sm">
-                  TIRO / ANVERSO
+                  {t.preview.front}
                 </span>
               )}
               {activeSheet.side === 'back' && (
                 <span className="text-[10px] bg-amber-700 text-white font-mono px-1.5 py-0.5 rounded-sm">
-                  RETIRO / REVERSO
+                  {t.preview.back}
                 </span>
               )}
             </div>
             <p className="text-[11px] text-neutral-500 mt-0.5 font-medium">
-              Pliego {currentSheetIdx + 1} de {plan.length} • Hoja {settings.sheetPreset} ({sheetW} × {sheetH} mm) • {activeSheet.cells.length} casillas ({activeSheet.cells[0] ? `${activeSheet.cells[0].width.toFixed(1)} × ${activeSheet.cells[0].height.toFixed(1)} mm` : ''})
+              {t.preview.sheetOf} {currentSheetIdx + 1} {t.preview.totalSheets} {plan.length} • Hoja {settings.sheetPreset} ({sheetW} × {sheetH} mm) • {activeSheet.cells.length} casillas ({activeSheet.cells[0] ? `${activeSheet.cells[0].width.toFixed(1)} × ${activeSheet.cells[0].height.toFixed(1)} mm` : ''})
             </p>
           </div>
         </div>
@@ -365,11 +367,11 @@ export const ImpositionPreview: React.FC<ImpositionPreviewProps> = ({
                     ? 'bg-amber-100 text-amber-950 border border-amber-300 font-semibold shadow-2xs'
                     : 'text-neutral-700 hover:bg-neutral-100'
                 }`}
-                title="Modo Trasluz: Superpone a contraluz la cara opuesta para comprobar el calce y registro"
+                title={t.preview.lightTableTooltip}
                 id="btn-toggle-light-table"
               >
                 <Sun className={`w-3.5 h-3.5 ${showLightTable ? 'text-amber-600 animate-pulse' : 'text-neutral-500'}`} />
-                <span>Trasluz</span>
+                <span>{t.preview.lightTable}</span>
                 {showLightTable && (
                   <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
                 )}
