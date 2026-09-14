@@ -216,8 +216,8 @@ export default function App() {
     }
   };
 
-  // Programmatically generate an 8-page sample PDF to allow instant testing
-  const handleLoadSamplePDF = async () => {
+  // Programmatically generate a sample PDF (8 or 16 pages) to allow instant testing
+  const handleLoadSamplePDF = async (pageCount: number = 8) => {
     setParsing(true);
     setErrorMsg(null);
     setSavedFilePath(null);
@@ -237,7 +237,7 @@ export default function App() {
         rgb(0.94, 0.94, 0.94), // warm concrete
       ];
 
-      for (let i = 1; i <= 8; i++) {
+      for (let i = 1; i <= pageCount; i++) {
         const page = pdfDoc.addPage([595.27, 841.89]);
         const color = colors[(i - 1) % colors.length];
 
@@ -284,7 +284,7 @@ export default function App() {
       }
 
       const bytes = await pdfDoc.save();
-      await processPDFBytes(bytes, 'documento_prueba_imposicion.pdf', bytes.length);
+      await processPDFBytes(bytes, `documento_prueba_imposicion_${pageCount}p.pdf`, bytes.length);
     } catch (err: any) {
       console.error(err);
       setErrorMsg('Error al generar el documento de demostración.');
@@ -618,15 +618,26 @@ export default function App() {
             {/* Demo test section */}
             <div className="mt-6 flex flex-col items-center gap-2 select-none">
               <span className="text-[11px] text-neutral-400">¿No tienes un PDF a mano para probar?</span>
-              <button
-                onClick={handleLoadSamplePDF}
-                disabled={parsing}
-                className="flex items-center gap-2 bg-neutral-100 hover:bg-neutral-200/80 text-neutral-700 border border-neutral-200 font-semibold text-xs px-4 py-2.5 rounded-lg transition-all cursor-pointer"
-                id="btn-sample-pdf"
-              >
-                <FileCode className="w-3.5 h-3.5 text-neutral-500" />
-                <span>Generar PDF de prueba (8 páginas)</span>
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => handleLoadSamplePDF(8)}
+                  disabled={parsing}
+                  className="flex items-center gap-2 bg-neutral-100 hover:bg-neutral-200/80 text-neutral-700 border border-neutral-200 font-semibold text-xs px-4 py-2.5 rounded-lg transition-all cursor-pointer disabled:opacity-50"
+                  id="btn-sample-pdf-8"
+                >
+                  <FileCode className="w-3.5 h-3.5 text-neutral-500" />
+                  <span>Generar PDF de prueba (8 páginas)</span>
+                </button>
+                <button
+                  onClick={() => handleLoadSamplePDF(16)}
+                  disabled={parsing}
+                  className="flex items-center gap-2 bg-neutral-100 hover:bg-neutral-200/80 text-neutral-700 border border-neutral-200 font-semibold text-xs px-4 py-2.5 rounded-lg transition-all cursor-pointer disabled:opacity-50"
+                  id="btn-sample-pdf-16"
+                >
+                  <FileCode className="w-3.5 h-3.5 text-neutral-500" />
+                  <span>Generar PDF de prueba (16 páginas)</span>
+                </button>
+              </div>
             </div>
 
           </div>

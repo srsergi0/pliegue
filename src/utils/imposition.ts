@@ -338,10 +338,47 @@ export function calculateOptimalTargetLayout(
 }
 
 /**
+ * Normalizes quarter-turn rotations, including negative back-side corrections.
+ */
+function normalizeRotation(angle: number): 0 | 90 | 180 | 270 {
+  return (((angle % 360) + 360) % 360) as 0 | 90 | 180 | 270;
+}
+
+/**
+ * A vertical turn axis mirrors columns; a horizontal turn axis mirrors rows.
+ * Long/short edge refer to the physical sheet, not fixed screen axes.
+ */
+function isBackSideHorizontallyMirrored(settings: ImpositionSettings): boolean {
+  // Explicit back faces in sheetwise/manual printing use a book turn by default.
+  if (settings.duplexMode === 'simplex') return true;
+
+  const { width, height } = getEffectiveSheetDimensions(settings);
+  const isLandscape = width > height;
+  return settings.duplexMode === 'short_edge' ? isLandscape : !isLandscape;
+}
+
+/**
+ * Converts the complete front-facing orientation to the back-facing orientation.
+ */
+function calculateBackSideRotation(
+  frontRotation: number,
+  settings: ImpositionSettings
+): 0 | 90 | 180 | 270 {
+  // First reflect the natural rotation (including auto-fit and fold offsets).
+  // A vertical-axis turn gives -theta; a horizontal-axis turn gives 180 - theta.
+  // Thus landscape booklets naturally use short-edge turns, while portrait
+  // booklets naturally use long-edge turns. Left/right binding changes page order,
+  // not the turn axis. Apply the user's back-only correction last, exactly once.
+  const turnRotation = isBackSideHorizontallyMirrored(settings) ? 0 : 180;
+  return normalizeRotation(turnRotation - frontRotation + (settings.reverseRotation || 0));
+}
+
+/**
  * Checks if a rotation angle in degrees is portrait-swapping (90 or 270).
  */
 export function isAngleLandscapeSwapping(angle: number): boolean {
-  return angle === 90 || angle === 270;
+  const rotation = normalizeRotation(angle);
+  return rotation === 90 || rotation === 270;
 }
 
 /**
@@ -367,18 +404,8 @@ export function calculateCellPlacement(
   settings: ImpositionSettings,
   isBackSide: boolean = false
 ): CellPlacement {
-  // 1. Calculate base rotation
-  let baseRotation = settings.pageRotation;
-  
-  if (isBackSide) {
-    if (settings.duplexMode === 'short_edge') {
-      baseRotation = ((baseRotation + 180) % 360) as 0 | 90 | 180 | 270;
-    }
-    if (settings.reverseRotation) {
-      baseRotation = ((baseRotation + settings.reverseRotation) % 360) as 0 | 90 | 180 | 270;
-    }
-  }
-
+  // 1. Calculate the natural front-facing rotation first.
+  const baseRotation = normalizeRotation(settings.pageRotation);
   let finalRotation = baseRotation;
 
   // 2. Intelligent Auto-rotate
@@ -397,8 +424,15 @@ export function calculateCellPlacement(
 
     // If one is landscape and the other is portrait, rotate 90 degrees clockwise to fit better
     if ((isCellLandscape && isPagePortrait) || (isCellPortrait && isPageLandscape)) {
-      finalRotation = ((baseRotation + 90) % 360) as 0 | 90 | 180 | 270;
+      finalRotation = normalizeRotation(baseRotation + 90);
     }
+  }
+
+  // Reflect only after auto-fit: reflecting the base angle and then adding +90
+  // would put a rotated reverse 180 degrees away from its matching front.
+  // reverseRotation is a final correction, so auto-fit must not cancel it.
+  if (isBackSide) {
+    finalRotation = calculateBackSideRotation(finalRotation, settings);
   }
 
   // 3. Rotated page dimensions in mm
@@ -459,6 +493,7 @@ export function generateImpositionPlan(
   }
 
   const { width: sheetW, height: sheetH } = getEffectiveSheetDimensions(settings);
+  const mirrorBackHorizontally = isBackSideHorizontallyMirrored(settings);
   const sheets: ImposedSheet[] = [];
 
   // Helper to get page dimensions in mm
@@ -486,11 +521,26 @@ export function generateImpositionPlan(
     isBackSide: boolean,
     extraRotation: number = 0
   ): ImpositionCell => {
+    // Booklet page tables describe the natural reverse viewed around the
+    // vertical spine. Changing to a horizontal turn requires rotating the
+    // entire reverse layout 180 degrees, not just the artwork in each cell.
+    // Its angular correction is already included by calculateBackSideRotation.
+    if (isBackSide && settings.layoutMode === 'booklet' && !mirrorBackHorizontally) {
+      c = Math.max(2, settings.gridCols) - 1 - c;
+      r = Math.max(1, settings.gridRows) - 1 - r;
+    }
+
     const x = marginLeft + c * (cellW + gutterH);
     const y = marginTop + r * (cellH + gutterV);
     const dims = getPageDim(vPageIdx, cellW, cellH);
-    const placement = calculateCellPlacement(cellW, cellH, dims.w, dims.h, settings, isBackSide);
-    const finalRot = ((placement.rotate + extraRotation) % 360) as 0 | 90 | 180 | 270;
+    const placement = calculateCellPlacement(cellW, cellH, dims.w, dims.h, settings, false);
+
+    // Fold offsets belong to the natural layout. Include them before reflecting
+    // so the back transformation and reverseRotation are each applied only once.
+    const naturalRotation = normalizeRotation(placement.rotate + extraRotation);
+    const finalRot = isBackSide
+      ? calculateBackSideRotation(naturalRotation, settings)
+      : naturalRotation;
 
     const vPage = vPageIdx !== null && vPageIdx < totalPages ? virtualPages[vPageIdx] : null;
 
@@ -525,9 +575,9 @@ export function generateImpositionPlan(
     const bCellW = availW / cols;
     const bCellH = availH / rows;
 
-    // Back side margins (mirrored horizontally for long-edge flip)
-    const backMarginLeft = settings.duplexMode === 'short_edge' ? settings.marginLeft : settings.marginRight;
-    const backMarginTop = settings.duplexMode === 'short_edge' ? settings.marginBottom : settings.marginTop;
+    // Mirror margins on the same physical axis used for positions and rotation.
+    const backMarginLeft = mirrorBackHorizontally ? settings.marginRight : settings.marginLeft;
+    const backMarginTop = mirrorBackHorizontally ? settings.marginTop : settings.marginBottom;
 
     const booklet4Up = settings.booklet4UpMode || 'cut_and_nest';
 
@@ -580,7 +630,7 @@ export function generateImpositionPlan(
           });
 
           if (settings.duplexMode !== 'simplex') {
-            // Back side:
+            // Natural back side, before conversion to the selected duplex axis:
             // Row 0: P3 (rot 180), P6 (rot 180)
             // Row 1: P2, P7
             const backCells: ImpositionCell[] = [
@@ -661,6 +711,8 @@ export function generateImpositionPlan(
               col1Back = blPageIdx;
             }
 
+            // Identical copies use the same natural booklet reverse; createCell
+            // converts both position and orientation for the selected turn axis.
             const backCells: ImpositionCell[] = [];
             for (let r = 0; r < rows; r++) {
               for (let sc = 0; sc < spreadCols; sc++) {
@@ -760,7 +812,9 @@ export function generateImpositionPlan(
 
             const r = Math.floor(slot / spreadCols);
             const sc = slot % spreadCols;
-            const backSc = settings.duplexMode === 'short_edge' ? sc : (spreadCols - 1 - sc);
+            // Build the natural vertical-axis reverse first. createCell handles
+            // the 180-degree layout conversion if the printer turns horizontally.
+            const backSc = spreadCols - 1 - sc;
 
             const spread = sigObj && sp < sigObj.spreads.length ? sigObj.spreads[sp] : null;
 
@@ -814,7 +868,8 @@ export function generateImpositionPlan(
           for (let slot = 0; slot < spreadsPerSheet; slot++) {
             const r = Math.floor(slot / spreadCols);
             const sc = slot % spreadCols;
-            const backSc = settings.duplexMode === 'short_edge' ? sc : (spreadCols - 1 - sc);
+            // Keep spread pairing in the natural booklet reverse convention.
+            const backSc = spreadCols - 1 - sc;
             const spreadIdx = s + slot * sigSheets;
 
             const spread = spreadIdx < sigSpreads ? sigObj.spreads[spreadIdx] : null;
@@ -873,9 +928,9 @@ export function generateImpositionPlan(
   const cellW = availW / cols;
   const cellH = availH / rows;
 
-  // Mirrored back margins for duplex registration
-  const backMarginLeft = settings.duplexMode === 'short_edge' ? settings.marginLeft : settings.marginRight;
-  const backMarginTop = settings.duplexMode === 'short_edge' ? settings.marginBottom : settings.marginTop;
+  // Mirrored back margins use the physical turn axis, including sheet orientation.
+  const backMarginLeft = mirrorBackHorizontally ? settings.marginRight : settings.marginLeft;
+  const backMarginTop = mirrorBackHorizontally ? settings.marginTop : settings.marginBottom;
 
   // Helper to get (col, row) from 0-based slot index based on gridOrder
   const getColRow = (slotIdx: number): { c: number; r: number } => {
@@ -892,12 +947,12 @@ export function generateImpositionPlan(
 
   // Helper to get mirrored back slot (colBack, rowBack) for perfect double-sided alignment
   const getMirroredBackPos = (cFront: number, rFront: number): { cBack: number; rBack: number } => {
-    if (settings.duplexMode === 'short_edge') {
-      // Flip on short edge (vertical flip)
-      return { cBack: cFront, rBack: rows - 1 - rFront };
-    } else {
-      // Flip on long edge (standard horizontal book flip)
+    if (mirrorBackHorizontally) {
+      // Vertical turn axis: portrait long edge or landscape short edge.
       return { cBack: cols - 1 - cFront, rBack: rFront };
+    } else {
+      // Horizontal turn axis: portrait short edge or landscape long edge.
+      return { cBack: cFront, rBack: rows - 1 - rFront };
     }
   };
 
