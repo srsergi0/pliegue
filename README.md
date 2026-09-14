@@ -2,9 +2,15 @@
 
 <div align="center">
   <img src="public/icon.png" width="104" height="104" alt="Pliegue Logo" />
-  <h2>Software Profesional de Imposición de Páginas y Preprensa Digital</h2>
-  <p><strong>Genera pliegos de impresión, cuadernillos para encuadernación, revistas, folletos y tarjetas con precisión milimétrica 100% en local.</strong></p>
-  <p><em>Professional PDF imposition, booklet maker & prepress desktop software for print shops and publishers.</em></p>
+  <h2>Professional PDF Imposition & Digital Prepress Software</h2>
+  <p><strong>Generate print sheets, saddle-stitch booklets, multi-signature books, flyers, and business cards with millimeter precision — 100% local and offline.</strong></p>
+
+  <p>
+    <a href="README.md"><strong>English</strong></a> •
+    <a href="README.es.md">Español</a> •
+    <a href="README.ja.md">日本語</a> •
+    <a href="README.zh.md">简体中文</a>
+  </p>
 
   <p>
     <a href="https://github.com/srsergi0/pliegue/releases/latest"><img src="https://img.shields.io/github/v/release/srsergi0/pliegue?style=for-the-badge&color=amber&logo=github" alt="Latest Release" /></a>
@@ -15,113 +21,98 @@
   </p>
 
   <p>
-    <a href="#-descargas">Descargar</a> •
-    <a href="#-características-principales">Características</a> •
-    <a href="#-english-overview">English Overview</a> •
-    <a href="#%EF%B8%8F-atajos-de-teclado">Atajos</a> •
-    <a href="#%EF%B8%8F-desarrollo-local">Desarrollo</a> •
-    <a href="CONTRIBUTING.md">Contribuir</a>
+    <a href="#-downloads">Downloads</a> •
+    <a href="#-key-features">Features</a> •
+    <a href="#%EF%B8%8F-keyboard-shortcuts">Shortcuts</a> •
+    <a href="#%EF%B8%8F-local-development">Development</a> •
+    <a href="CONTRIBUTING.md">Contributing</a>
   </p>
 </div>
 
 ---
 
-## 📥 Descargas (Instaladores y Portables)
+## 📥 Downloads (Installers & Portables)
 
-Descarga la versión más reciente lista para usar desde **[GitHub Releases](https://github.com/srsergi0/pliegue/releases/latest)**:
+Download the latest production release ready to run from **[GitHub Releases](https://github.com/srsergi0/pliegue/releases/latest)**:
 
-| Plataforma | Instalador Oficial | Versión Portable / Binario |
+| Platform | Official Installer | Portable / Standalone Binary |
 | :--- | :--- | :--- |
-| **Windows** (x64) | [Descargar Instalador `.exe`](https://github.com/srsergi0/pliegue/releases/latest) | [Descargar Portable `.exe`](https://github.com/srsergi0/pliegue/releases/latest) |
-| **macOS** (Intel / Apple Silicon) | [Descargar `.dmg`](https://github.com/srsergi0/pliegue/releases/latest) | [Descargar `.zip`](https://github.com/srsergi0/pliegue/releases/latest) |
-| **Linux** (Debian / Ubuntu / Arch) | [Descargar `.deb`](https://github.com/srsergi0/pliegue/releases/latest) | [Descargar `.AppImage`](https://github.com/srsergi0/pliegue/releases/latest) |
+| **Windows** (x64) | [Download Setup `.exe`](https://github.com/srsergi0/pliegue/releases/latest) | [Download Portable `.exe`](https://github.com/srsergi0/pliegue/releases/latest) |
+| **macOS** (Apple Silicon / Intel) | [Download `.dmg`](https://github.com/srsergi0/pliegue/releases/latest) | [Download `.zip`](https://github.com/srsergi0/pliegue/releases/latest) |
+| **Linux** (Debian / Ubuntu / Arch) | [Download `.deb`](https://github.com/srsergi0/pliegue/releases/latest) | [Download `.AppImage`](https://github.com/srsergi0/pliegue/releases/latest) |
 
 ---
 
-## ✨ Características Principales
+## ✨ Key Features
 
-- 📖 **Imposición para Cuadernillos (Booklet / Saddle Stitch)**:
-  - Ordenación matemática automática para grapado al centro o cosido de lomo.
-  - Soporte para **Signaturas / Cuadernillos agrupados** (4, 8, 12, 16, 24, 32 páginas por pliego).
-  - Relleno automático de páginas en blanco para múltiplos exactos de pliego.
-- 🖨️ **Montajes N-Up, Repetición y Grillas**:
-  - Repetición de la misma página (*Step and Repeat*) para tarjetas de presentación, etiquetas adhesivas o flyers.
-  - Ordenación consecutiva por filas o columnas.
-  - Modo **Corte y Apilado (*Cut & Stack*)** para corte veloz directo a guillotina sin barajar.
-- 🔦 **Mesa de Luz / Modo Trasluz (Flip Cara)**:
-  - Inspección translúcida en tiempo real para verificar el registro exacto entre la cara frontal (tiro) y el dorso (retiro).
-  - Volteo dinámico de pliego para comprobar alineación de medianiles y márgenes de corte.
-- ✂️ **Marcas de Corte y Sangrado (*Bleed*)**:
-  - Marcas de corte vectoriales en esquinas y medianiles internos.
-  - Longitud, grosor, sangrado simétrico y separación de medianiles totalmente personalizables.
-- ⚡ **Plantillas de Taller de 1 Clic**:
-  - Díptico A5 en pliego A4.
-  - Revista A4 en pliego A3 (Tiro y Retiro).
-  - 4× A5 en pliego A3 doble.
-  - Tarjetas de presentación con sangrado de 3 mm.
-  - Libro en cuadernillos de 16 páginas.
-- 🔒 **100% Privado y Local**:
-  - Tus documentos jamás se suben a servidores externos ni a la nube. Procesamiento ultrarrápido en local.
-
----
-
-## 🌐 English Overview
-
-**Pliegue** is an open-source, high-performance desktop application for **PDF imposition, prepress automation, and print layout composition**. Engineered for commercial print shops, independent publishers, bookbinders, and graphic designers.
-
-### Key Capabilities:
-- **Booklet & Saddle-Stitch Imposition:** Automatic sheet page-pairing, folding signatures (4, 8, 12, 16, 24, 32 pp), and blank page padding.
-- **N-Up & Step-and-Repeat:** Grid layout duplication for business cards, flyers, labels, and badges.
-- **Cut & Stack Mode:** Guillotine-ready sequential output requiring zero manual collating.
-- **Light Table / Backlight Registration Check:** Real-time translucent overlay to verify front-to-back alignment (work-and-turn / work-and-tumble).
-- **Vector Printer Marks & Bleed Control:** Precision crop marks, folding lines, customizable bleed margins, and gutters.
-- **100% Offline & Private:** Client-side zero-cloud processing ensuring total document security.
+- 📖 **Saddle-Stitch Booklet Imposition**:
+  - Automatic page pairing algorithm for center folding, stapling, or sewing.
+  - Support for **Multi-Signature grouping** (4, 8, 12, 16, 24, 32 pages per signature) for case-bound books.
+  - Intelligent blank page padding to maintain exact sheet multiples.
+- 🖨️ **N-Up, Step & Repeat, and Grid Layouts**:
+  - Single-page repeat (*Step & Repeat*) for business cards, adhesive labels, or flyers.
+  - Consecutive page sequencing by rows or columns.
+  - **Cut & Stack** mode for rapid guillotine trimming with zero manual collating.
+- 🔦 **Light Table / Backlight Mode (Flip & Overlay)**:
+  - Real-time translucent overlay to inspect sheet-to-sheet registration between front (work) and back (turn).
+  - Rapid side-flip to verify gutters, trim lines, and margins.
+- ✂️ **Vector Printer Marks & Bleed Control**:
+  - Crisp vector crop marks at outer corners and inter-page gutters.
+  - Configurable mark length, stroke width, symmetric bleed, and page spacing.
+- ⚡ **1-Click Workshop Presets**:
+  - A5 brochure on A4 sheet (Half-fold / Bi-fold).
+  - A4 magazine on A3 sheet (Front & Back).
+  - 4× A5 on double A3 sheet.
+  - Business cards with 3 mm bleed (8 or 10-up).
+  - 16-page book signatures.
+- 🔒 **100% Private & Offline**:
+  - Zero cloud reliance: PDF documents never leave your computer. High-speed local processing.
 
 ---
 
-## ⌨️ Atajos de Teclado
+## ⌨️ Keyboard Shortcuts
 
-| Atajo | Acción |
+| Shortcut | Action |
 | :--- | :--- |
-| `Ctrl + O` / `Cmd + O` | Abrir documento PDF |
-| `Ctrl + S` / `Cmd + S` | Exportar pliegos PDF listos para imprimir |
-| `Ctrl + 0` | Restablecer nivel de zoom al 100% |
-| `Ctrl + +` / `Ctrl + -` | Aumentar o disminuir zoom |
-| `F12` / `Ctrl + Shift + I` | Abrir herramientas de desarrollador |
+| `Ctrl + O` / `Cmd + O` | Open PDF document |
+| `Ctrl + S` / `Cmd + S` | Export & save imposed PDF |
+| `Ctrl + 0` | Reset zoom to 100% |
+| `Ctrl + +` / `Ctrl + -` | Zoom in / Zoom out |
+| `F12` / `Ctrl + Shift + I` | Open Developer Tools |
 
 ---
 
-## 🛠️ Desarrollo Local
+## 🛠️ Local Development
 
-Este proyecto está construido con **Bun**, **React 19**, **TypeScript**, **Tailwind CSS** y **Electron**.
+Pliegue is built with **Bun**, **React 19**, **TypeScript**, **Tailwind CSS**, and **Electron**.
 
 ```bash
-# 1. Clonar el repositorio
+# 1. Clone the repository
 git clone https://github.com/srsergi0/pliegue.git
 cd pliegue
 
-# 2. Instalar dependencias con Bun
+# 2. Install dependencies with Bun
 bun install
 
-# 3. Iniciar en modo desarrollo (Vite + Electron con Hot Reload)
+# 3. Start development server with Hot Reload (Vite + Electron)
 bun run dev
 
-# 4. Compilar binarios de producción
-bun run dist:win    # Windows (.exe Setup y Portable)
-bun run dist:mac    # macOS (.dmg y .zip)
-bun run dist:linux  # Linux (.AppImage y .deb)
+# 4. Package desktop applications
+bun run dist:win    # Windows (.exe Setup & Portable)
+bun run dist:mac    # macOS (.dmg & .zip)
+bun run dist:linux  # Linux (.AppImage & .deb)
 ```
 
 ---
 
-## 🤝 Contribuciones y Comunidad
+## 🤝 Contributing
 
-¡Las contribuciones son bienvenidas! Revisa la [Guía de Contribución](CONTRIBUTING.md) y nuestro [Código de Conducta](CODE_OF_CONDUCT.md) antes de enviar un Pull Request.
+Contributions are welcome! Please read the [Contributing Guide](CONTRIBUTING.md) and [Code of Conduct](CODE_OF_CONDUCT.md) before submitting a Pull Request.
 
-Para dudas, sugerencias o reportes de bugs, por favor abre un [GitHub Issue](https://github.com/srsergi0/pliegue/issues).
+For bugs, feature ideas, or workshop presets, open an issue on [GitHub Issues](https://github.com/srsergi0/pliegue/issues).
 
 ---
 
-## 📄 Licencia
+## 📄 License
 
-Distribuido bajo la **Licencia MIT**. Consulta el archivo [LICENSE](LICENSE) para más detalles.
+Distributed under the **MIT License**. See [LICENSE](LICENSE) for details.
