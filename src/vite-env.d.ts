@@ -13,6 +13,16 @@ export interface SavePDFResult {
   error?: string;
 }
 
+export interface UpdaterStatusData {
+  status: 'checking' | 'available' | 'not-available' | 'downloading' | 'downloaded' | 'error' | 'dev-mode';
+  version?: string;
+  releaseDate?: string;
+  percent?: number;
+  transferred?: number;
+  total?: number;
+  message?: string;
+}
+
 export interface ElectronAPI {
   isElectron: boolean;
   openPDFDialog: () => Promise<OpenPDFResult>;
@@ -25,6 +35,10 @@ export interface ElectronAPI {
   isMaximized: () => Promise<boolean>;
   getSystemLocale?: () => Promise<string>;
   getPreferredLanguages?: () => Promise<string[]>;
+  checkForUpdates?: () => Promise<{ status: string; updateInfo?: any; message?: string }>;
+  downloadUpdate?: () => Promise<{ status: string; message?: string }>;
+  quitAndInstall?: () => Promise<void>;
+  onUpdateStatus?: (callback: (data: UpdaterStatusData) => void) => () => void;
 }
 
 declare global {

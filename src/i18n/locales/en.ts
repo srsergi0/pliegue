@@ -130,4 +130,14 @@ export const en: Translations = {
     japanese: '日本語 (Japanese)',
     chinese: '简体中文 (Chinese)',
   },
+  updater: {
+    updateAvailable: 'New version available',
+    updateAvailableDesc: 'A new release is ready to download from GitHub.',
+    downloadNow: 'Download update',
+    downloading: 'Downloading update...',
+    readyToInstall: 'Update ready to install',
+    readyToInstallDesc: 'Will be applied upon restarting the application.',
+    restartAndInstall: 'Restart & update',
+    dismiss: 'Dismiss',
+  },
 };

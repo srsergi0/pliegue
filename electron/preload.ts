@@ -49,6 +49,16 @@ const electronAPI = {
   getPreferredLanguages: async (): Promise<string[]> => {
     return await ipcRenderer.invoke('app:get-preferred-languages');
   },
+
+  // Auto-Updater
+  checkForUpdates: () => ipcRenderer.invoke('updater:check'),
+  downloadUpdate: () => ipcRenderer.invoke('updater:download'),
+  quitAndInstall: () => ipcRenderer.invoke('updater:quit-and-install'),
+  onUpdateStatus: (callback: (data: any) => void) => {
+    const listener = (_event: any, data: any) => callback(data);
+    ipcRenderer.on('updater:status', listener);
+    return () => ipcRenderer.removeListener('updater:status', listener);
+  },
 };
 
 contextBridge.exposeInMainWorld('electronAPI', electronAPI);

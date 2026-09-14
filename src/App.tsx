@@ -6,6 +6,7 @@ import { ControlPanel } from './components/ControlPanel';
 import { ImpositionPreview } from './components/ImpositionPreview';
 import { TemplatesModal } from './components/TemplatesModal';
 import { LanguageSelector } from './components/LanguageSelector';
+import { UpdateBanner } from './components/UpdateBanner';
 import { WORKSHOP_PRESETS, JobTemplate } from './constants/jobPresets';
 import { useI18n } from './i18n/I18nContext';
 import {
@@ -445,6 +446,9 @@ export default function App() {
           )}
         </div>
       </header>
+
+      {/* Auto-Update Banner */}
+      <UpdateBanner />
 
       {/* Desktop Saved Notification Banner */}
       {savedFilePath && (

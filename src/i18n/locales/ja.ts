@@ -130,4 +130,14 @@ export const ja: Translations = {
     japanese: '日本語',
     chinese: '简体中文 (中国語)',
   },
+  updater: {
+    updateAvailable: '新しいバージョンが利用可能です',
+    updateAvailableDesc: 'GitHub上に新しいリリースが公開されています。',
+    downloadNow: 'アップデートをダウンロード',
+    downloading: 'アップデートをダウンロード中...',
+    readyToInstall: 'インストールの準備が完了しました',
+    readyToInstallDesc: 'アプリケーションの再起動時に適用されます。',
+    restartAndInstall: '再起動して更新',
+    dismiss: '閉じる',
+  },
 };

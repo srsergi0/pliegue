@@ -25,6 +25,7 @@
   "dependencies": {
     "@tailwindcss/vite": "^4.1.14",
     "@vitejs/plugin-react": "^5.0.4",
+    "electron-updater": "^6.8.9",
     "lucide-react": "^0.546.0",
     "motion": "^12.23.24",
     "pdf-lib": "^1.17.1",
@@ -54,6 +55,13 @@
     "directories": {
       "output": "release"
     },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "srsergi0",
+        "repo": "pliegue"
+      }
+    ],
     "files": [
       "dist/**/*",
       "dist-electron/**/*",

@@ -1,4 +1,5 @@
 import { app, BrowserWindow, dialog, ipcMain, shell, Menu, screen } from 'electron';
+import { autoUpdater } from 'electron-updater';
 import path from 'path';
 import fs from 'fs';
 
@@ -258,13 +259,100 @@ ipcMain.handle('app:get-preferred-languages', () => {
   return app.getPreferredSystemLanguages?.() || [app.getLocale()];
 });
 
+// Configuración y eventos del servicio de Auto-Update
+autoUpdater.autoDownload = false;
+autoUpdater.autoInstallOnAppQuit = true;
+
+function setupAutoUpdater() {
+  if (isDev) {
+    console.log('[AutoUpdater] Modo desarrollo: auto-update desactivado');
+    return;
+  }
+
+  autoUpdater.on('checking-for-update', () => {
+    mainWindow?.webContents.send('updater:status', { status: 'checking' });
+  });
+
+  autoUpdater.on('update-available', (info) => {
+    mainWindow?.webContents.send('updater:status', {
+      status: 'available',
+      version: info.version,
+      releaseDate: info.releaseDate,
+    });
+  });
+
+  autoUpdater.on('update-not-available', (info) => {
+    mainWindow?.webContents.send('updater:status', {
+      status: 'not-available',
+      version: info.version,
+    });
+  });
+
+  autoUpdater.on('download-progress', (progress) => {
+    mainWindow?.webContents.send('updater:status', {
+      status: 'downloading',
+      percent: Math.round(progress.percent),
+      transferred: progress.transferred,
+      total: progress.total,
+    });
+  });
+
+  autoUpdater.on('update-downloaded', (info) => {
+    mainWindow?.webContents.send('updater:status', {
+      status: 'downloaded',
+      version: info.version,
+    });
+  });
+
+  autoUpdater.on('error', (err) => {
+    console.warn('[AutoUpdater] Error:', err.message);
+    mainWindow?.webContents.send('updater:status', {
+      status: 'error',
+      message: err.message,
+    });
+  });
+
+  // Chequeo automático 4 segundos después de abrir la aplicación
+  setTimeout(() => {
+    autoUpdater.checkForUpdates().catch((err) => {
+      console.warn('[AutoUpdater] Error en verificación inicial:', err.message);
+    });
+  }, 4000);
+}
+
+// Canales IPC de Auto-Update
+ipcMain.handle('updater:check', async () => {
+  if (isDev) return { status: 'dev-mode' };
+  try {
+    const result = await autoUpdater.checkForUpdates();
+    return { status: 'ok', updateInfo: result?.updateInfo };
+  } catch (err: any) {
+    return { status: 'error', message: err.message };
+  }
+});
+
+ipcMain.handle('updater:download', async () => {
+  try {
+    await autoUpdater.downloadUpdate();
+    return { status: 'ok' };
+  } catch (err: any) {
+    return { status: 'error', message: err.message };
+  }
+});
+
+ipcMain.handle('updater:quit-and-install', () => {
+  autoUpdater.quitAndInstall();
+});
+
 // Ciclo de vida de la aplicación Electron
 app.whenReady().then(() => {
   createWindow();
+  setupAutoUpdater();
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
       createWindow();
+      setupAutoUpdater();
     }
   });
 });

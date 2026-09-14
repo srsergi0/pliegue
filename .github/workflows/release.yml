@@ -83,7 +83,7 @@ jobs:
             TAG_NAME="v1.0.0"
           fi
           shopt -s nullglob
-          FILES=(release/*.exe release/*.dmg release/*.zip release/*.AppImage release/*.deb)
+          FILES=(release/*.exe release/*.dmg release/*.zip release/*.AppImage release/*.deb release/*.yml release/*.blockmap)
           echo "Archivos generados para subir:"
           ls -lh "${FILES[@]}" || true
           if [ ${#FILES[@]} -gt 0 ]; then

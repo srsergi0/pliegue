@@ -129,4 +129,14 @@ export interface Translations {
     japanese: string;
     chinese: string;
   };
+  updater: {
+    updateAvailable: string;
+    updateAvailableDesc: string;
+    downloadNow: string;
+    downloading: string;
+    readyToInstall: string;
+    readyToInstallDesc: string;
+    restartAndInstall: string;
+    dismiss: string;
+  };
 }

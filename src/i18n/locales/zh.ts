@@ -130,4 +130,14 @@ export const zh: Translations = {
     japanese: '日本語 (日语)',
     chinese: '简体中文',
   },
+  updater: {
+    updateAvailable: '发现新版本可用',
+    updateAvailableDesc: 'GitHub 上已有新版本发布可供下载。',
+    downloadNow: '立即下载更新',
+    downloading: '正在下载更新包...',
+    readyToInstall: '新版本已就绪',
+    readyToInstallDesc: '将在重启应用后完成安装与更新。',
+    restartAndInstall: '重启并完成安装',
+    dismiss: '忽略',
+  },
 };
