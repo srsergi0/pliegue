@@ -1,0 +1,29 @@
+name: '💡 Solicitud de Función o Plantilla (Feature Request)'
+description: 'Sugiere una nueva plantilla de imposición, función o mejora para Pliegue.'
+labels: ['enhancement']
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ¿Tienes una idea o necesidad específica de taller para Pliegue? Cuéntanosla.
+  - type: textarea
+    id: problem
+    attributes:
+      label: ¿Qué necesidad o problema busca resolver esta función?
+      description: Explica el flujo de trabajo de preprensa o impresión que deseas agilizar.
+    validations:
+      required: true
+  - type: textarea
+    id: solution
+    attributes:
+      label: Solución o Comportamiento Propuesto
+      description: Describe cómo te gustaría que funcione o qué opciones de configuración debería tener.
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: Contexto o Ejemplos Adicionales
+      description: Formatos de pliego, medidas estándar, fotos de acabados, etc.
+    validations:
+      required: false

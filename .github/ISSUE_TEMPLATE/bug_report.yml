@@ -1,0 +1,50 @@
+name: '🐛 Reporte de Error (Bug Report)'
+description: 'Reporta un fallo, comportamiento erróneo o error de renderizado en Pliegue.'
+labels: ['bug', 'triage']
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Gracias por tomarte el tiempo de reportar este problema. Asegúrate de verificar si ya existe un issue similar abierto.
+  - type: input
+    id: version
+    attributes:
+      label: Versión de Pliegue
+      description: ¿Qué versión estás utilizando? (ej. v1.0.5)
+      placeholder: v1.0.5
+    validations:
+      required: true
+  - type: dropdown
+    id: os
+    attributes:
+      label: Sistema Operativo
+      options:
+        - Windows 11
+        - Windows 10
+        - Linux (Ubuntu/Debian)
+        - Linux (Arch/Manjaro/Hyprland)
+        - macOS (Apple Silicon - M1/M2/M3)
+        - macOS (Intel)
+    validations:
+      required: true
+  - type: textarea
+    id: description
+    attributes:
+      label: Descripción del Problema
+      description: Explica de forma clara y concisa lo que ocurrió.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Pasos para Reproducir
+      description: 1. Abrir documento...\n2. Seleccionar modo...\n3. Ver resultado...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Comportamiento Esperado
+      description: ¿Qué esperabas que sucediera?
+    validations:
+      required: false

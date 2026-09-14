@@ -1,56 +1,81 @@
 # 📄 Pliegue
 
 <div align="center">
-  <img src="public/icon.png" width="96" height="96" alt="Pliegue Logo" />
-  <h3>Software Profesional de Imposición de Páginas y Preprensa Digital</h3>
-  <p>Genera pliegos de impresión, cuadernillos para encuadernación, revistas, folletos y tarjetas con precisión milimétrica 100% en local.</p>
+  <img src="public/icon.png" width="104" height="104" alt="Pliegue Logo" />
+  <h2>Software Profesional de Imposición de Páginas y Preprensa Digital</h2>
+  <p><strong>Genera pliegos de impresión, cuadernillos para encuadernación, revistas, folletos y tarjetas con precisión milimétrica 100% en local.</strong></p>
+  <p><em>Professional PDF imposition, booklet maker & prepress desktop software for print shops and publishers.</em></p>
 
-  [![Release](https://img.shields.io/github/v/release/srsergi0/pliegue?style=flat-square&color=amber)](https://github.com/srsergi0/pliegue/releases)
-  [![License](https://img.shields.io/badge/license-MIT-blue?style=flat-square)](LICENSE)
-  [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey?style=flat-square)](#descargas)
+  <p>
+    <a href="https://github.com/srsergi0/pliegue/releases/latest"><img src="https://img.shields.io/github/v/release/srsergi0/pliegue?style=for-the-badge&color=amber&logo=github" alt="Latest Release" /></a>
+    <a href="https://github.com/srsergi0/pliegue/actions"><img src="https://img.shields.io/github/actions/workflow/status/srsergi0/pliegue/release.yml?style=for-the-badge&logo=githubactions&logoColor=white" alt="CI Build Status" /></a>
+    <a href="https://github.com/srsergi0/pliegue/releases"><img src="https://img.shields.io/github/downloads/srsergi0/pliegue/total?style=for-the-badge&color=blue&logo=windows" alt="Total Downloads" /></a>
+    <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-green?style=for-the-badge" alt="License: MIT" /></a>
+    <a href="https://github.com/srsergi0/pliegue/stargazers"><img src="https://img.shields.io/github/stars/srsergi0/pliegue?style=for-the-badge&color=yellow&logo=star" alt="GitHub Stars" /></a>
+  </p>
+
+  <p>
+    <a href="#-descargas">Descargar</a> •
+    <a href="#-características-principales">Características</a> •
+    <a href="#-english-overview">English Overview</a> •
+    <a href="#%EF%B8%8F-atajos-de-teclado">Atajos</a> •
+    <a href="#%EF%B8%8F-desarrollo-local">Desarrollo</a> •
+    <a href="CONTRIBUTING.md">Contribuir</a>
+  </p>
 </div>
+
+---
+
+## 📥 Descargas (Instaladores y Portables)
+
+Descarga la versión más reciente lista para usar desde **[GitHub Releases](https://github.com/srsergi0/pliegue/releases/latest)**:
+
+| Plataforma | Instalador Oficial | Versión Portable / Binario |
+| :--- | :--- | :--- |
+| **Windows** (x64) | [Descargar Instalador `.exe`](https://github.com/srsergi0/pliegue/releases/latest) | [Descargar Portable `.exe`](https://github.com/srsergi0/pliegue/releases/latest) |
+| **macOS** (Intel / Apple Silicon) | [Descargar `.dmg`](https://github.com/srsergi0/pliegue/releases/latest) | [Descargar `.zip`](https://github.com/srsergi0/pliegue/releases/latest) |
+| **Linux** (Debian / Ubuntu / Arch) | [Descargar `.deb`](https://github.com/srsergi0/pliegue/releases/latest) | [Descargar `.AppImage`](https://github.com/srsergi0/pliegue/releases/latest) |
 
 ---
 
 ## ✨ Características Principales
 
 - 📖 **Imposición para Cuadernillos (Booklet / Saddle Stitch)**:
-  - Ordenación automática para grapado al centro o cosido.
+  - Ordenación matemática automática para grapado al centro o cosido de lomo.
   - Soporte para **Signaturas / Cuadernillos agrupados** (4, 8, 12, 16, 24, 32 páginas por pliego).
-  - Cálculo automático de páginas en blanco para múltiplos exactos.
+  - Relleno automático de páginas en blanco para múltiplos exactos de pliego.
 - 🖨️ **Montajes N-Up, Repetición y Grillas**:
-  - Repetición de la misma página (*Step and Repeat*) para tarjetas de presentación, etiquetas o flyers.
+  - Repetición de la misma página (*Step and Repeat*) para tarjetas de presentación, etiquetas adhesivas o flyers.
   - Ordenación consecutiva por filas o columnas.
-  - Modo **Corte y Apilado (*Cut & Stack*)** para guillotina rápida.
-- 🔦 **Modo Trasluz / Flip Cara (Mesa de Luz)**:
+  - Modo **Corte y Apilado (*Cut & Stack*)** para corte veloz directo a guillotina sin barajar.
+- 🔦 **Mesa de Luz / Modo Trasluz (Flip Cara)**:
   - Inspección translúcida en tiempo real para verificar el registro exacto entre la cara frontal (tiro) y el dorso (retiro).
-  - Volteo rápido de pliego para comprobar alineación de medianiles y márgenes de corte.
+  - Volteo dinámico de pliego para comprobar alineación de medianiles y márgenes de corte.
 - ✂️ **Marcas de Corte y Sangrado (*Bleed*)**:
-  - Marcas de corte vectoriales en las esquinas y medianiles.
-  - Longitud y grosor configurables.
-  - Sangrado simétrico y medianiles personalizables.
+  - Marcas de corte vectoriales en esquinas y medianiles internos.
+  - Longitud, grosor, sangrado simétrico y separación de medianiles totalmente personalizables.
 - ⚡ **Plantillas de Taller de 1 Clic**:
-  - Folleto A5 en pliego A4 (Díptico).
-  - Revista A4 en pliego A3 (Tapa y páginas).
-  - 4× A5 en pliego A3 (Tiro y Retiro doble).
-  - Tarjetas de presentación (8 o 10 por pliego con sangrado).
-  - Flyers A6 4-Up en pliego A4.
+  - Díptico A5 en pliego A4.
+  - Revista A4 en pliego A3 (Tiro y Retiro).
+  - 4× A5 en pliego A3 doble.
+  - Tarjetas de presentación con sangrado de 3 mm.
   - Libro en cuadernillos de 16 páginas.
 - 🔒 **100% Privado y Local**:
-  - Tus documentos PDF jamás se suben a servidores externos ni a la nube.
-  - Procesamiento ultra-rápido en tu propio procesador.
+  - Tus documentos jamás se suben a servidores externos ni a la nube. Procesamiento ultrarrápido en local.
 
 ---
 
-## 📥 Descargas
+## 🌐 English Overview
 
-Descarga el instalador o ejecutable portable para tu sistema operativo desde la sección de **[Releases](https://github.com/srsergi0/pliegue/releases)**:
+**Pliegue** is an open-source, high-performance desktop application for **PDF imposition, prepress automation, and print layout composition**. Engineered for commercial print shops, independent publishers, bookbinders, and graphic designers.
 
-| Sistema Operativo | Formato de Instalación | Portable |
-| :--- | :--- | :--- |
-| **Windows** | `.exe` (Instalador NSIS) | `.exe` (Portable sin instalación) |
-| **macOS** | `.dmg` | `.zip` |
-| **Linux** | `.deb` | `.AppImage` |
+### Key Capabilities:
+- **Booklet & Saddle-Stitch Imposition:** Automatic sheet page-pairing, folding signatures (4, 8, 12, 16, 24, 32 pp), and blank page padding.
+- **N-Up & Step-and-Repeat:** Grid layout duplication for business cards, flyers, labels, and badges.
+- **Cut & Stack Mode:** Guillotine-ready sequential output requiring zero manual collating.
+- **Light Table / Backlight Registration Check:** Real-time translucent overlay to verify front-to-back alignment (work-and-turn / work-and-tumble).
+- **Vector Printer Marks & Bleed Control:** Precision crop marks, folding lines, customizable bleed margins, and gutters.
+- **100% Offline & Private:** Client-side zero-cloud processing ensuring total document security.
 
 ---
 
@@ -60,33 +85,43 @@ Descarga el instalador o ejecutable portable para tu sistema operativo desde la 
 | :--- | :--- |
 | `Ctrl + O` / `Cmd + O` | Abrir documento PDF |
 | `Ctrl + S` / `Cmd + S` | Exportar pliegos PDF listos para imprimir |
-| `F12` o `Ctrl + Shift + I` | Abrir consola de desarrollo (DevTools) |
+| `Ctrl + 0` | Restablecer nivel de zoom al 100% |
+| `Ctrl + +` / `Ctrl + -` | Aumentar o disminuir zoom |
+| `F12` / `Ctrl + Shift + I` | Abrir herramientas de desarrollador |
 
 ---
 
 ## 🛠️ Desarrollo Local
 
-Este proyecto utiliza **Bun** como entorno de ejecución y gestor de paquetes de alto rendimiento, junto a **Vite**, **React**, **Tailwind CSS** y **Electron**.
+Este proyecto está construido con **Bun**, **React 19**, **TypeScript**, **Tailwind CSS** y **Electron**.
 
 ```bash
 # 1. Clonar el repositorio
 git clone https://github.com/srsergi0/pliegue.git
 cd pliegue
 
-# 2. Instalar dependencias
+# 2. Instalar dependencias con Bun
 bun install
 
 # 3. Iniciar en modo desarrollo (Vite + Electron con Hot Reload)
 bun run dev
 
-# 4. Compilar binarios de escritorio
-bun run dist:win    # Windows (.exe)
-bun run dist:mac    # macOS (.dmg)
-bun run dist:linux  # Linux (.AppImage, .deb)
+# 4. Compilar binarios de producción
+bun run dist:win    # Windows (.exe Setup y Portable)
+bun run dist:mac    # macOS (.dmg y .zip)
+bun run dist:linux  # Linux (.AppImage y .deb)
 ```
+
+---
+
+## 🤝 Contribuciones y Comunidad
+
+¡Las contribuciones son bienvenidas! Revisa la [Guía de Contribución](CONTRIBUTING.md) y nuestro [Código de Conducta](CODE_OF_CONDUCT.md) antes de enviar un Pull Request.
+
+Para dudas, sugerencias o reportes de bugs, por favor abre un [GitHub Issue](https://github.com/srsergi0/pliegue/issues).
 
 ---
 
 ## 📄 Licencia
 
-Distribuido bajo la Licencia MIT. Consulta el archivo `LICENSE` para más detalles.
+Distribuido bajo la **Licencia MIT**. Consulta el archivo [LICENSE](LICENSE) para más detalles.
