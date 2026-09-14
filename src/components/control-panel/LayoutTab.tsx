@@ -289,11 +289,12 @@ export const LayoutTab: React.FC<LayoutTabProps> = ({
               <label className="text-[11px] font-medium text-neutral-600">
                 {t.layout.bookletPagesPerSide}
               </label>
-              <div className="grid grid-cols-3 gap-1.5">
+              <div className="grid grid-cols-2 gap-1.5">
                 {[
                   { c: 2, r: 1, label: t.layout.booklet2up, desc: t.layout.bookletHalfSheet, minPages: 4 },
                   { c: 2, r: 2, label: t.layout.booklet4up, desc: t.layout.booklet4in1, minPages: 4 },
                   { c: 4, r: 2, label: t.layout.booklet8up, desc: t.layout.booklet8in1, minPages: 8 },
+                  { c: 4, r: 4, label: t.layout.booklet16up, desc: t.layout.booklet16in1, minPages: 16 },
                 ].map((preset) => {
                   const isSelected = settings.gridCols === preset.c && settings.gridRows === preset.r;
                   const isDisabled = Boolean(sourcePDFInfo && sourcePDFInfo.pageCount < preset.minPages);
@@ -305,11 +306,15 @@ export const LayoutTab: React.FC<LayoutTabProps> = ({
                       title={isDisabled ? t.layout.requiresAtLeast.replace('{min}', String(preset.minPages)).replace('{has}', String(sourcePDFInfo?.pageCount ?? 0)) : preset.desc}
                       onClick={() => {
                         if (isDisabled) return;
+                        const leavingFrenchFold =
+                          settings.booklet4UpMode === 'french_fold' &&
+                          !(preset.c === 2 && preset.r === 2);
                         onChangeSettings({
                           ...settings,
                           gridCols: preset.c,
                           gridRows: preset.r,
                           sheetOrientation: 'landscape',
+                          ...(leavingFrenchFold ? { booklet4UpMode: 'cut_and_nest' as const } : {}),
                         });
                       }}
                       className={`flex flex-col items-center justify-center py-2 px-1 rounded-lg border text-center transition-all ${
@@ -347,7 +352,9 @@ export const LayoutTab: React.FC<LayoutTabProps> = ({
                 >
                   <option value="cut_and_nest">{t.layout.modeContinuous}</option>
                   <option value="duplicate_2up">{t.layout.modeTwins}</option>
-                  <option value="french_fold">{t.layout.modeFrenchFold}</option>
+                  {settings.gridCols === 2 && settings.gridRows === 2 && (
+                    <option value="french_fold">{t.layout.modeFrenchFold}</option>
+                  )}
                 </select>
               </div>
             )}

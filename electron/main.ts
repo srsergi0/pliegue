@@ -2,6 +2,12 @@ import { app, BrowserWindow, dialog, ipcMain, shell, Menu, screen } from 'electr
 import { autoUpdater } from 'electron-updater';
 import path from 'path';
 import fs from 'fs';
+import { generateImposedPDF } from '../src/utils/pdfGenerator';
+import { ImposedSheet, ImpositionSettings } from '../src/types';
+
+// Imposed-PDF export duplicates page streams in memory (~3-4x file size at
+// peak), so raise the V8 heap ceiling for large print files.
+app.commandLine.appendSwitch('js-flags', '--max-old-space-size=8192');
 
 let mainWindow: BrowserWindow | null = null;
 
@@ -190,6 +196,69 @@ async function handleOpenPDFDialog() {
 ipcMain.handle('dialog:open-pdf', async () => {
   return await handleOpenPDFDialog();
 });
+
+// Exportación optimizada en proceso principal (Node.js 64-bit sin límites del renderer)
+ipcMain.handle(
+  'dialog:export-pdf',
+  async (
+    _event,
+    {
+      defaultName,
+      sourcePath,
+      pdfBytes,
+      plan,
+      settings,
+    }: {
+      defaultName: string;
+      sourcePath?: string;
+      pdfBytes?: Uint8Array;
+      plan: ImposedSheet[];
+      settings: ImpositionSettings;
+    }
+  ) => {
+    if (!mainWindow) return { canceled: true, error: 'No hay ventana activa' };
+
+    const result = await dialog.showSaveDialog(mainWindow, {
+      title: 'Guardar PDF Imposicionado',
+      defaultPath: defaultName,
+      filters: [{ name: 'Documento PDF (*.pdf)', extensions: ['pdf'] }],
+    });
+
+    if (result.canceled || !result.filePath) {
+      return { canceled: true };
+    }
+
+    try {
+      let sourceBytes: Uint8Array;
+      if (sourcePath && fs.existsSync(sourcePath)) {
+        console.log(`[Pliegue Main] Leyendo PDF fuente directamente desde disco: ${sourcePath}`);
+        const fileBuffer = await fs.promises.readFile(sourcePath);
+        sourceBytes = new Uint8Array(fileBuffer);
+      } else if (pdfBytes && pdfBytes.byteLength > 0) {
+        console.log(`[Pliegue Main] Usando PDF bytes recibidos (${(pdfBytes.byteLength / 1048576).toFixed(1)} MB)`);
+        sourceBytes = pdfBytes;
+      } else {
+        throw new Error('No se pudo acceder al archivo PDF fuente original.');
+      }
+
+      console.log(`[Pliegue Main] Generando imposición en proceso principal...`);
+      const outputBytes = await generateImposedPDF(sourceBytes, plan, settings);
+      console.log(`[Pliegue Main] Escribiendo ${(outputBytes.byteLength / 1048576).toFixed(1)} MB en: ${result.filePath}`);
+      await fs.promises.writeFile(result.filePath, Buffer.from(outputBytes));
+
+      return {
+        canceled: false,
+        filePath: result.filePath,
+      };
+    } catch (err: any) {
+      console.error('Error al exportar PDF en proceso principal:', err);
+      return {
+        canceled: false,
+        error: err.message || 'Error al procesar y guardar el archivo PDF',
+      };
+    }
+  }
+);
 
 ipcMain.handle(
   'dialog:save-pdf',

@@ -150,6 +150,7 @@ export interface ImposedSheet {
 
 export interface PDFSourceInfo {
   name: string;
+  filePath?: string;
   size: number; // in bytes
   pageCount: number;
   // Number of panoramic / double-spread pages detected in document

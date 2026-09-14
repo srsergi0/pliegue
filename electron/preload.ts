@@ -26,6 +26,17 @@ const electronAPI = {
     return await ipcRenderer.invoke('dialog:save-pdf', { defaultName, bytes });
   },
 
+  // Exportar PDF imposicionado procesado directamente en proceso principal (Node.js)
+  exportPDF: async (params: {
+    defaultName: string;
+    sourcePath?: string;
+    pdfBytes?: Uint8Array;
+    plan: any;
+    settings: any;
+  }): Promise<SavePDFResult> => {
+    return await ipcRenderer.invoke('dialog:export-pdf', params);
+  },
+
   // Abrir archivo en la aplicación por defecto del sistema operativo
   openPath: async (filePath: string): Promise<string> => {
     return await ipcRenderer.invoke('shell:open-path', filePath);

@@ -22,6 +22,7 @@ function TemplateCard({
   onDelete,
   deleteLabel,
 }: {
+  key?: React.Key;
   tmpl: JobTemplate;
   isMatch: boolean;
   isCustom?: boolean;

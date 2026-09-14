@@ -47,6 +47,7 @@ export interface Translations {
     dragOnlyPdf: string;
     demoFailed: string;
     exportFailed: string;
+    exportTooLarge: string;
   };
   tabs: {
     layout: string;
@@ -101,9 +102,11 @@ export interface Translations {
     booklet2up: string;
     booklet4up: string;
     booklet8up: string;
+    booklet16up: string;
     bookletHalfSheet: string;
     booklet4in1: string;
     booklet8in1: string;
+    booklet16in1: string;
     incompatible: string;
     requiresAtLeast: string;
     cutAndNestTitle: string;

@@ -632,8 +632,10 @@ export function generateImpositionPlan(
 
     let globalSheetNumber = 1;
 
-    // Check if French fold mode is chosen (only for 2 cols x 2 rows)
-    if (spreadsPerSheet >= 2 && booklet4Up === 'french_fold') {
+    // Check if French fold mode is chosen (only valid for 2 cols x 2 rows:
+    // its 8-page head-to-head table is hardwired to that grid)
+    const isFrenchFoldGrid = cols === 2 && rows === 2;
+    if (spreadsPerSheet >= 2 && booklet4Up === 'french_fold' && isFrenchFoldGrid) {
       const sigStep = settings.signatureSize > 0 ? settings.signatureSize : totalPages;
       const totalSignatures = Math.ceil(totalPages / sigStep);
 

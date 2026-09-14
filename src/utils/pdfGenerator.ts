@@ -94,24 +94,99 @@ export async function generateImposedPDF(
     throw new Error("El archivo PDF original está vacío o no es válido.");
   }
 
-  // Ensure fresh, undivorced ArrayBuffer copy
-  const safeBytes = sourcePdfBytes.slice(0);
-
-  const srcDoc = await PDFDocument.load(safeBytes);
+  // Load document with fast non-blocking parsing and no metadata modification
+  const srcDoc = await PDFDocument.load(sourcePdfBytes, {
+    ignoreEncryption: true,
+    parseSpeed: Infinity,
+    updateMetadata: false,
+  });
   const outDoc = await PDFDocument.create();
+
+  const totalCells = sheets.reduce((n, s) => n + s.cells.length, 0);
+  console.log(
+    `[Pliegue] export: source=${(sourcePdfBytes.byteLength / 1048576).toFixed(1)}MB ` +
+    `sheets=${sheets.length} cells=${totalCells}`
+  );
 
   const { width: sheetWMm, height: sheetHMm } = getEffectiveSheetDimensions(settings);
   const sheetWPt = sheetWMm * MM_TO_PT;
   const sheetHPt = sheetHMm * MM_TO_PT;
+  const totalSrcPages = srcDoc.getPageCount();
 
-  // Cache embedded pages to avoid re-embedding identical pages across multiple slots or sheets
+  // 1. Pre-scan all sheets to collect all unique (sourcePageIndex, pagePart) needed.
+  const neededMap = new Map<string, { pageIndex: number; part: 'full' | 'left_half' | 'right_half' }>();
+  for (const sheet of sheets) {
+    for (const cell of sheet.cells) {
+      if (
+        cell.sourcePageIndex !== null &&
+        cell.sourcePageIndex >= 0 &&
+        cell.sourcePageIndex < totalSrcPages
+      ) {
+        const part = cell.pagePart || 'full';
+        const key = `${cell.sourcePageIndex}_${part}`;
+        if (!neededMap.has(key)) {
+          neededMap.set(key, { pageIndex: cell.sourcePageIndex, part });
+        }
+      }
+    }
+  }
+
+  // 2. Batch-embed all needed pages in a SINGLE outDoc.embedPages(...) call.
+  // Crucial: A single call to embedPages shares one PDFObjectCopier, which ensures
+  // all shared fonts, images, ICC profiles, and streams are deduplicated and copied
+  // ONLY ONCE into outDoc, avoiding catastrophic memory explosion.
+  const pagesToEmbed: PDFPage[] = [];
+  const boxesToEmbed: (any)[] = [];
+  const keysToEmbed: string[] = [];
+
+  for (const [key, { pageIndex, part }] of neededMap.entries()) {
+    const srcPage = srcDoc.getPage(pageIndex);
+    const origAngle = srcPage.getRotation().angle || 0;
+    const srcWPt = srcPage.getWidth();
+    const srcHPt = srcPage.getHeight();
+    const isSplit = part === 'left_half' || part === 'right_half';
+
+    let box: any = undefined;
+    if (isSplit) {
+      if (origAngle === 0) {
+        box = part === 'left_half'
+          ? { left: 0, bottom: 0, right: srcWPt / 2, top: srcHPt }
+          : { left: srcWPt / 2, bottom: 0, right: srcWPt, top: srcHPt };
+      } else if (origAngle === 90) {
+        box = part === 'left_half'
+          ? { left: 0, bottom: srcHPt / 2, right: srcWPt, top: srcHPt }
+          : { left: 0, bottom: 0, right: srcWPt, top: srcHPt / 2 };
+      } else if (origAngle === 180) {
+        box = part === 'left_half'
+          ? { left: srcWPt / 2, bottom: 0, right: srcWPt, top: srcHPt }
+          : { left: 0, bottom: 0, right: srcWPt / 2, top: srcHPt };
+      } else if (origAngle === 270) {
+        box = part === 'left_half'
+          ? { left: 0, bottom: 0, right: srcWPt, top: srcHPt / 2 }
+          : { left: 0, bottom: srcHPt / 2, right: srcWPt, top: srcHPt };
+      }
+    }
+
+    pagesToEmbed.push(srcPage);
+    boxesToEmbed.push(box);
+    keysToEmbed.push(key);
+  }
+
+  const embeddedPagesList = pagesToEmbed.length > 0
+    ? await outDoc.embedPages(pagesToEmbed, boxesToEmbed)
+    : [];
+
   const embeddedPageCache = new Map<string, PDFEmbeddedPage>();
+  for (let i = 0; i < keysToEmbed.length; i++) {
+    embeddedPageCache.set(keysToEmbed[i], embeddedPagesList[i]);
+  }
 
+  // 3. Render sheets
   for (const sheet of sheets) {
     const newSheet = outDoc.addPage([sheetWPt, sheetHPt]);
 
     for (const cell of sheet.cells) {
-      // 1. Draw crop marks if enabled
+      // Draw crop marks if enabled
       if (settings.drawCropMarks) {
         drawCellCropMarks(newSheet, cell, sheetHMm, settings.cropMarkLength, settings.bleed);
       }
@@ -121,55 +196,22 @@ export async function generateImposedPDF(
         continue;
       }
 
-      if (cell.sourcePageIndex < 0 || cell.sourcePageIndex >= srcDoc.getPageCount()) {
+      if (cell.sourcePageIndex < 0 || cell.sourcePageIndex >= totalSrcPages) {
         continue;
       }
-
-      const srcPage = srcDoc.getPage(cell.sourcePageIndex);
-      const origAngle = srcPage.getRotation().angle || 0; // existing /Rotate in source PDF
-      const srcWPt = srcPage.getWidth();
-      const srcHPt = srcPage.getHeight();
 
       const part = cell.pagePart || 'full';
       const isSplit = part === 'left_half' || part === 'right_half';
       const cacheKey = `${cell.sourcePageIndex}_${part}`;
-
-      // 2. Retrieve or embed the source page (with sub-bounding box if split half)
-      let embeddedPage = embeddedPageCache.get(cacheKey);
+      const embeddedPage = embeddedPageCache.get(cacheKey);
       if (!embeddedPage) {
-        if (isSplit) {
-          let box;
-          if (origAngle === 0) {
-            if (part === 'left_half') {
-              box = { left: 0, bottom: 0, right: srcWPt / 2, top: srcHPt };
-            } else {
-              box = { left: srcWPt / 2, bottom: 0, right: srcWPt, top: srcHPt };
-            }
-          } else if (origAngle === 90) {
-            if (part === 'left_half') {
-              box = { left: 0, bottom: srcHPt / 2, right: srcWPt, top: srcHPt };
-            } else {
-              box = { left: 0, bottom: 0, right: srcWPt, top: srcHPt / 2 };
-            }
-          } else if (origAngle === 180) {
-            if (part === 'left_half') {
-              box = { left: srcWPt / 2, bottom: 0, right: srcWPt, top: srcHPt };
-            } else {
-              box = { left: 0, bottom: 0, right: srcWPt / 2, top: srcHPt };
-            }
-          } else if (origAngle === 270) {
-            if (part === 'left_half') {
-              box = { left: 0, bottom: 0, right: srcWPt, top: srcHPt / 2 };
-            } else {
-              box = { left: 0, bottom: srcHPt / 2, right: srcWPt, top: srcHPt };
-            }
-          }
-          embeddedPage = await outDoc.embedPage(srcPage, box);
-        } else {
-          embeddedPage = await outDoc.embedPage(srcPage);
-        }
-        embeddedPageCache.set(cacheKey, embeddedPage);
+        continue;
       }
+
+      const srcPage = srcDoc.getPage(cell.sourcePageIndex);
+      const origAngle = srcPage.getRotation().angle || 0;
+      const srcWPt = srcPage.getWidth();
+      const srcHPt = srcPage.getHeight();
 
       // Visual dimensions of source page before imposition rotation
       const isOrigSwapped = origAngle === 90 || origAngle === 270;
@@ -207,10 +249,9 @@ export async function generateImposedPDF(
 
       // Calculate total clockwise rotation to apply to raw embeddedPage
       const totalClockwise = (cell.rotation + origAngle) % 360;
-      // In pdf-lib, positive degrees rotate counter-clockwise:
       const theta_ccw = (360 - totalClockwise) % 360;
 
-      // Unrotated drawing dimensions (embeddedPage already has cropped width/height if split)
+      // Unrotated drawing dimensions
       const drawWidth = embeddedPage.width * scale;
       const drawHeight = embeddedPage.height * scale;
 
@@ -222,15 +263,12 @@ export async function generateImposedPDF(
         xDraw = xMinPt;
         yDraw = yMinPt;
       } else if (totalClockwise === 90) {
-        // 90 deg clockwise
         xDraw = xMinPt;
         yDraw = yMinPt + drawWidth;
       } else if (totalClockwise === 180) {
-        // 180 deg upside down
         xDraw = xMinPt + drawWidth;
         yDraw = yMinPt + drawHeight;
       } else if (totalClockwise === 270) {
-        // 270 deg clockwise (90 deg counter-clockwise)
         xDraw = xMinPt + drawHeight;
         yDraw = yMinPt;
       }
@@ -246,5 +284,12 @@ export async function generateImposedPDF(
     }
   }
 
-  return await outDoc.save();
+  // 4. Save with low-memory writer options:
+  // useObjectStreams: false avoids generating intermediate compressed object stream chunks.
+  // updateFieldAppearances: false avoids AcroForm parsing.
+  return await outDoc.save({
+    useObjectStreams: false,
+    updateFieldAppearances: false,
+    objectsPerTick: Infinity,
+  });
 }

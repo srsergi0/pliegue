@@ -27,6 +27,13 @@ export interface ElectronAPI {
   isElectron: boolean;
   openPDFDialog: () => Promise<OpenPDFResult>;
   savePDF: (defaultName: string, bytes: Uint8Array) => Promise<SavePDFResult>;
+  exportPDF: (params: {
+    defaultName: string;
+    sourcePath?: string;
+    pdfBytes?: Uint8Array;
+    plan: any;
+    settings: any;
+  }) => Promise<SavePDFResult>;
   openPath: (filePath: string) => Promise<string>;
   showInFolder: (filePath: string) => Promise<void>;
   minimizeWindow: () => Promise<void>;

@@ -125,14 +125,18 @@ export default function App() {
   };
 
   // Parse a PDF file and extract pages and metadata
-  const processPDFBytes = async (bytes: Uint8Array, fileName: string, fileSize: number) => {
+  const processPDFBytes = async (
+    bytes: Uint8Array,
+    fileName: string,
+    fileSize: number,
+    filePath?: string
+  ) => {
     setParsing(true);
     setErrorMsg(null);
     setSavedFilePath(null);
     try {
-      // Safe copies to ensure the ArrayBuffer is never detached or transferred
-      const storedBytes = new Uint8Array(bytes.slice());
-      const workerCopy = new Uint8Array(bytes.slice());
+      // Only slice for the worker so pdfjs doesn't detach or mutate the stored bytes
+      const workerCopy = bytes.slice();
 
       const loadingTask = pdfjs.getDocument({ data: workerCopy });
       const doc = await loadingTask.promise;
@@ -166,6 +170,7 @@ export default function App() {
 
       setSourcePDFInfo({
         name: fileName,
+        filePath,
         size: fileSize,
         pageCount,
         doublePageCount,
@@ -174,7 +179,7 @@ export default function App() {
         pages,
       });
 
-      setPdfBytes(storedBytes);
+      setPdfBytes(bytes);
       setPdfDocProxy(doc);
 
       // Reset document-specific settings from previous file
@@ -197,7 +202,7 @@ export default function App() {
     try {
       const res = await window.electronAPI.openPDFDialog();
       if (!res.canceled && res.data && res.name) {
-        await processPDFBytes(res.data, res.name, res.data.length);
+        await processPDFBytes(res.data, res.name, res.data.length, res.path);
       }
     } catch (err) {
       console.error('Error al abrir diálogo nativo:', err);
@@ -209,9 +214,10 @@ export default function App() {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    const filePath = (file as any).path || undefined;
     const arrayBuffer = await file.arrayBuffer();
     const bytes = new Uint8Array(arrayBuffer);
-    await processPDFBytes(bytes, file.name, file.size);
+    await processPDFBytes(bytes, file.name, file.size, filePath);
     // Limpiar input
     e.target.value = '';
   };
@@ -238,9 +244,10 @@ export default function App() {
 
     const file = e.dataTransfer.files?.[0];
     if (file && (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf'))) {
+      const filePath = (file as any).path || undefined;
       const arrayBuffer = await file.arrayBuffer();
       const bytes = new Uint8Array(arrayBuffer);
-      await processPDFBytes(bytes, file.name, file.size);
+      await processPDFBytes(bytes, file.name, file.size, filePath);
     } else {
       setErrorMsg(t.errors.dragOnlyPdf);
     }
@@ -380,11 +387,27 @@ export default function App() {
     setExporting(true);
     setErrorMsg(null);
     try {
-      const outputBytes = await generateImposedPDF(pdfBytes, plan, settings);
       const cleanName = sourcePDFInfo.name.replace(/\.[^/.]+$/, "");
       const defaultFileName = `pliegue_${cleanName}_${settings.sheetPreset}.pdf`;
 
-      if (window.electronAPI) {
+      if (window.electronAPI?.exportPDF) {
+        // En Electron usamos el proceso principal (Node.js 64-bit sin límites de memoria del renderer)
+        const result = await window.electronAPI.exportPDF({
+          defaultName: defaultFileName,
+          sourcePath: sourcePDFInfo.filePath,
+          pdfBytes: sourcePDFInfo.filePath ? undefined : pdfBytes,
+          plan,
+          settings,
+        });
+
+        if (!result.canceled && result.filePath) {
+          setSavedFilePath(result.filePath);
+        } else if (result.error) {
+          setErrorMsg(`Error al guardar: ${result.error}`);
+        }
+      } else if (window.electronAPI) {
+        // Fallback para preload que sólo tenga savePDF
+        const outputBytes = await generateImposedPDF(pdfBytes, plan, settings);
         const result = await window.electronAPI.savePDF(defaultFileName, outputBytes);
         if (!result.canceled && result.filePath) {
           setSavedFilePath(result.filePath);
@@ -392,7 +415,8 @@ export default function App() {
           setErrorMsg(`Error al guardar: ${result.error}`);
         }
       } else {
-        // Fallback web
+        // Fallback web (usa generateImposedPDF optimizado con embedPages batch)
+        const outputBytes = await generateImposedPDF(pdfBytes, plan, settings);
         const blob = new Blob([outputBytes], { type: 'application/pdf' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -405,7 +429,12 @@ export default function App() {
       }
     } catch (err) {
       console.error('Error al exportar PDF:', err);
-      setErrorMsg(t.errors.exportFailed);
+      // Out-of-memory during stream copy (large source PDF): show actionable message
+      const msg = err instanceof Error ? `${err.name}: ${err.message}` : String(err);
+      const isMemoryError =
+        err instanceof RangeError ||
+        /array buffer|out of memory|allocation failed/i.test(msg);
+      setErrorMsg(isMemoryError ? t.errors.exportTooLarge : t.errors.exportFailed);
     } finally {
       setExporting(false);
     }
