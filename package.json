@@ -1,7 +1,7 @@
 {
   "name": "pliegue",
   "private": true,
-  "version": "1.0.5",
+  "version": "1.1.0",
   "author": "srsergio <sergiolazaromondargo@gmail.com>",
   "description": "Pliegue — Software profesional de imposición de páginas y preprensa digital de archivos PDF",
   "main": "dist-electron/main.cjs",
