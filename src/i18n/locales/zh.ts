@@ -23,6 +23,8 @@ export const zh: Translations = {
     pdfSavedSuccess: 'PDF文件已成功保存！',
     appliedTemplate: '已应用预设模板',
     savedTemplate: '模板已保存',
+    print: '打印',
+    printTooltip: '用系统对话框打印当前印张',
   },
   welcome: {
     heroTitle: '专业级 PDF 页面拼版工具',

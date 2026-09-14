@@ -23,6 +23,8 @@ export interface Translations {
     pdfSavedSuccess: string;
     appliedTemplate: string;
     savedTemplate: string;
+    print: string;
+    printTooltip: string;
   };
   welcome: {
     heroTitle: string;

@@ -24,6 +24,7 @@ import {
   FileUp,
   Laptop,
   Sparkles,
+  Printer,
 } from 'lucide-react';
 import { pdfjs } from './utils/pdfSetup';
 
@@ -410,6 +411,12 @@ export default function App() {
     }
   };
 
+  // Imprimir pliego activo con el diálogo de impresión del sistema
+  const handlePrint = () => {
+    if (!pdfBytes || plan.length === 0) return;
+    window.print();
+  };
+
   // Atajos de teclado para flujo de trabajo rápido sin barra de menús
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -434,6 +441,14 @@ export default function App() {
         if (pdfBytes && plan.length > 0 && !exporting) {
           e.preventDefault();
           handleExportFinalPDF();
+        }
+      }
+
+      // Ctrl+P o Cmd+P para imprimir (diálogo del sistema)
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'p') {
+        if (pdfBytes && plan.length > 0) {
+          e.preventDefault();
+          handlePrint();
         }
       }
     };
@@ -502,6 +517,19 @@ export default function App() {
             >
               <FileUp className="w-3.5 h-3.5" />
               <span>{t.actions.openAnother}</span>
+            </button>
+          )}
+
+          {pdfBytes && (
+            <button
+              onClick={handlePrint}
+              disabled={parsing || exporting || plan.length === 0}
+              className="flex items-center gap-1.5 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 font-medium text-xs px-3 py-2 rounded-lg transition-all border border-neutral-200 cursor-pointer select-none disabled:opacity-40"
+              title={t.actions.printTooltip}
+              id="btn-print-sheet"
+            >
+              <Printer className="w-3.5 h-3.5" />
+              <span>{t.actions.print}</span>
             </button>
           )}
 

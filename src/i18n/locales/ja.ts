@@ -23,6 +23,8 @@ export const ja: Translations = {
     pdfSavedSuccess: 'PDFが正常に保存されました！',
     appliedTemplate: '適用されたプリセット',
     savedTemplate: 'プリセットを保存しました',
+    print: '印刷',
+    printTooltip: 'システムダイアログで現在の用紙を印刷',
   },
   welcome: {
     heroTitle: 'プロフェッショナルPDF面付けツール',

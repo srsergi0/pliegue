@@ -23,6 +23,8 @@ export const en: Translations = {
     pdfSavedSuccess: 'PDF saved successfully!',
     appliedTemplate: 'Template applied',
     savedTemplate: 'Template saved',
+    print: 'Print',
+    printTooltip: 'Print current sheet with the system dialog',
   },
   welcome: {
     heroTitle: 'Professional PDF Page Imposition',

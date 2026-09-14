@@ -23,6 +23,8 @@ export const es: Translations = {
     pdfSavedSuccess: '¡PDF guardado exitosamente!',
     appliedTemplate: 'Plantilla aplicada',
     savedTemplate: 'Plantilla guardada',
+    print: 'Imprimir',
+    printTooltip: 'Imprimir pliego actual con el diálogo del sistema',
   },
   welcome: {
     heroTitle: 'Imposición de Páginas Profesional',
