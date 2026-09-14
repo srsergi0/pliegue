@@ -54,6 +54,12 @@ export type BindingEdge = 'left' | 'right';
 export type DuplexItemMode = 'two_page_items' | 'consecutive';
 export type ScaleMode = 'fit' | 'fill' | 'original' | 'custom';
 export type Booklet4UpMode = 'cut_and_nest' | 'duplicate_2up' | 'french_fold';
+export type PagePart = 'full' | 'left_half' | 'right_half';
+export type SpacerReason =
+  | 'front_cover_inside'
+  | 'spread_alignment_start'
+  | 'back_cover_inside'
+  | 'signature_padding';
 
 export interface ImpositionSettings {
   sheetPreset: SheetSizePreset;
@@ -75,6 +81,12 @@ export interface ImpositionSettings {
   signatureSize: number; // 0 = all in one, or 4, 8, 12, 16, 32
   duplexItemMode: DuplexItemMode;
   booklet4UpMode?: Booklet4UpMode; // Mode when booklet has 4 or more pages per sheet
+  
+  // Manga / Spreads support
+  splitDoubleSpreads: boolean; // divide panoramic double pages into 2 facing internal pages
+  
+  // Excluded / disabled pages from imposition
+  excludedPageIndices: number[]; // 0-based source page indices to omit
   
   pageRotation: 0 | 90 | 180 | 270;
   reverseRotation: 0 | 90 | 180 | 270;
@@ -105,6 +117,18 @@ export interface ImpositionCell {
    */
   sourcePageIndex: number | null;
   /**
+   * Part of the page to render (for split double spreads)
+   */
+  pagePart?: PagePart;
+  /**
+   * Whether this cell is a blank spacer inserted to align a double spread on facing pages or covers
+   */
+  isSpacerBlank?: boolean;
+  /**
+   * Reason for inserting spacer blank
+   */
+  spacerReason?: SpacerReason;
+  /**
    * Clockwise rotation in degrees: 0, 90, 180, 270
    */
   rotation: 0 | 90 | 180 | 270;
@@ -128,6 +152,8 @@ export interface PDFSourceInfo {
   name: string;
   size: number; // in bytes
   pageCount: number;
+  // Number of panoramic / double-spread pages detected in document
+  doublePageCount?: number;
   // Dimensions of the first page in mm
   firstPageWidth: number;
   firstPageHeight: number;

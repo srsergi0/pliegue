@@ -105,7 +105,7 @@ export async function generateImposedPDF(
   const sheetHPt = sheetHMm * MM_TO_PT;
 
   // Cache embedded pages to avoid re-embedding identical pages across multiple slots or sheets
-  const embeddedPageCache = new Map<number, PDFEmbeddedPage>();
+  const embeddedPageCache = new Map<string, PDFEmbeddedPage>();
 
   for (const sheet of sheets) {
     const newSheet = outDoc.addPage([sheetWPt, sheetHPt]);
@@ -116,7 +116,7 @@ export async function generateImposedPDF(
         drawCellCropMarks(newSheet, cell, sheetHMm, settings.cropMarkLength, settings.bleed);
       }
 
-      // Empty cell (e.g. blank page padding in booklet)
+      // Empty cell (e.g. blank page padding in booklet or spacer blank)
       if (cell.sourcePageIndex === null) {
         continue;
       }
@@ -125,23 +125,56 @@ export async function generateImposedPDF(
         continue;
       }
 
-      // 2. Retrieve or embed the source page
-      let embeddedPage = embeddedPageCache.get(cell.sourcePageIndex);
-      if (!embeddedPage) {
-        const srcPage = srcDoc.getPage(cell.sourcePageIndex);
-        const [emb] = await outDoc.embedPages([srcPage]);
-        embeddedPage = emb;
-        embeddedPageCache.set(cell.sourcePageIndex, emb);
-      }
-
       const srcPage = srcDoc.getPage(cell.sourcePageIndex);
       const origAngle = srcPage.getRotation().angle || 0; // existing /Rotate in source PDF
       const srcWPt = srcPage.getWidth();
       const srcHPt = srcPage.getHeight();
 
+      const part = cell.pagePart || 'full';
+      const isSplit = part === 'left_half' || part === 'right_half';
+      const cacheKey = `${cell.sourcePageIndex}_${part}`;
+
+      // 2. Retrieve or embed the source page (with sub-bounding box if split half)
+      let embeddedPage = embeddedPageCache.get(cacheKey);
+      if (!embeddedPage) {
+        if (isSplit) {
+          let box;
+          if (origAngle === 0) {
+            if (part === 'left_half') {
+              box = { left: 0, bottom: 0, right: srcWPt / 2, top: srcHPt };
+            } else {
+              box = { left: srcWPt / 2, bottom: 0, right: srcWPt, top: srcHPt };
+            }
+          } else if (origAngle === 90) {
+            if (part === 'left_half') {
+              box = { left: 0, bottom: srcHPt / 2, right: srcWPt, top: srcHPt };
+            } else {
+              box = { left: 0, bottom: 0, right: srcWPt, top: srcHPt / 2 };
+            }
+          } else if (origAngle === 180) {
+            if (part === 'left_half') {
+              box = { left: srcWPt / 2, bottom: 0, right: srcWPt, top: srcHPt };
+            } else {
+              box = { left: 0, bottom: 0, right: srcWPt / 2, top: srcHPt };
+            }
+          } else if (origAngle === 270) {
+            if (part === 'left_half') {
+              box = { left: 0, bottom: 0, right: srcWPt, top: srcHPt / 2 };
+            } else {
+              box = { left: 0, bottom: srcHPt / 2, right: srcWPt, top: srcHPt };
+            }
+          }
+          embeddedPage = await outDoc.embedPage(srcPage, box);
+        } else {
+          embeddedPage = await outDoc.embedPage(srcPage);
+        }
+        embeddedPageCache.set(cacheKey, embeddedPage);
+      }
+
       // Visual dimensions of source page before imposition rotation
       const isOrigSwapped = origAngle === 90 || origAngle === 270;
-      const visualWMm = (isOrigSwapped ? srcHPt : srcWPt) / MM_TO_PT;
+      const fullVisualWMm = (isOrigSwapped ? srcHPt : srcWPt) / MM_TO_PT;
+      const visualWMm = isSplit ? fullVisualWMm / 2 : fullVisualWMm;
       const visualHMm = (isOrigSwapped ? srcWPt : srcHPt) / MM_TO_PT;
 
       // Final visual dimensions in cell after imposition rotation (cell.rotation is clockwise)
@@ -177,9 +210,9 @@ export async function generateImposedPDF(
       // In pdf-lib, positive degrees rotate counter-clockwise:
       const theta_ccw = (360 - totalClockwise) % 360;
 
-      // Unrotated drawing dimensions
-      const drawWidth = srcWPt * scale;
-      const drawHeight = srcHPt * scale;
+      // Unrotated drawing dimensions (embeddedPage already has cropped width/height if split)
+      const drawWidth = embeddedPage.width * scale;
+      const drawHeight = embeddedPage.height * scale;
 
       // Determine drawing origin depending on clockwise rotation
       let xDraw = xMinPt;

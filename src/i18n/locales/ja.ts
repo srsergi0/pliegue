@@ -61,6 +61,10 @@ export const ja: Translations = {
     signatureGroupDesc: '糸綴じ・上製本用にドキュメントを複数の折丁に分割。',
     allPagesInOne: '全ページを単一の折丁にまとめる',
     pagesPerSignature: 'ページ/折丁',
+    splitDoubleSpreads: '見開きページを分割して内側対向配置 (マンガ見開き)',
+    splitDoubleSpreadsDesc: '横長のマンガ見開きを自動検出し、2ページに分割して小冊子を開いた際に必ず内側の見開き（左右対向）になるよう配置します。',
+    doublePagesDetected: '検出された見開きページ',
+    courtesyPagesCount: '追加された白ページ（見返し・調整）',
   },
   margins: {
     title: '余白・アキ設定',
@@ -112,6 +116,11 @@ export const ja: Translations = {
     sourcePages: '元ページ数',
     emptyPage: '白紙',
     blankPagesNotice: '折丁ページ数調整のため白紙ページが自動挿入されました。',
+    disabledPagesTitle: '無効化されたページ',
+    disabledPagesHint: 'ページをクリックすると再有効化され、面付けに再配置されます。',
+    clickToDisableTooltip: 'クリックしてページを除外/無効化',
+    clickToEnableTooltip: 'クリックしてページを再有効化',
+    restoreAll: 'すべて再有効化',
   },
   templates: {
     modalTitle: '印刷工房プリセット一覧',

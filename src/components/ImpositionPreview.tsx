@@ -1,13 +1,14 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { pdfjs } from '../utils/pdfSetup';
-import { ImpositionSettings, ImposedSheet, PDFSourceInfo } from '../types';
+import { ImpositionSettings, ImposedSheet, PDFSourceInfo, PagePart } from '../types';
 import { getEffectiveSheetDimensions } from '../utils/imposition';
 import { useI18n } from '../i18n/I18nContext';
-import { Eye, ChevronLeft, ChevronRight, RefreshCw, Info, ArrowRightLeft, Scissors, Sun } from 'lucide-react';
+import { Eye, ChevronLeft, ChevronRight, RefreshCw, Info, ArrowRightLeft, Scissors, Sun, EyeOff, RotateCcw, FileText } from 'lucide-react';
 
 interface PDFPageThumbnailProps {
   pdfDocument: pdfjs.PDFDocumentProxy;
   pageIndex: number;
+  pagePart?: PagePart;
   rotation: 0 | 90 | 180 | 270;
   cellWidthMm: number;
   cellHeightMm: number;
@@ -16,11 +17,13 @@ interface PDFPageThumbnailProps {
 
 /**
  * Renders an actual PDF page to a high-resolution Canvas,
- * correctly scaled, centered and rotated natively by PDF.js.
+ * correctly scaled, centered and rotated natively by PDF.js,
+ * with support for splitting panoramic double spreads into halves.
  */
 const PDFPageThumbnail: React.FC<PDFPageThumbnailProps> = ({
   pdfDocument,
   pageIndex,
+  pagePart = 'full',
   rotation,
   cellWidthMm,
   cellHeightMm,
@@ -55,7 +58,8 @@ const PDFPageThumbnail: React.FC<PDFPageThumbnailProps> = ({
 
         // Viewport at scale 1.0 to get rotated dimensions in points
         const testViewport = page.getViewport({ scale: 1.0, rotation: totalClockwiseAngle });
-        const rotWMm = (testViewport.width * 25.4) / 72;
+        const isSplit = pagePart === 'left_half' || pagePart === 'right_half';
+        const rotWMm = ((testViewport.width * 25.4) / 72) / (isSplit ? 2 : 1);
         const rotHMm = (testViewport.height * 25.4) / 72;
 
         // Calculate fit scale factor
@@ -79,18 +83,40 @@ const PDFPageThumbnail: React.FC<PDFPageThumbnailProps> = ({
         }
 
         const renderViewport = page.getViewport({ scale: pixelScale, rotation: totalClockwiseAngle });
-        canvas.width = renderViewport.width;
-        canvas.height = renderViewport.height;
 
-        const renderContext = {
-          canvasContext: ctx,
-          viewport: renderViewport,
-        };
+        if (isSplit) {
+          const offscreen = document.createElement('canvas');
+          offscreen.width = renderViewport.width;
+          offscreen.height = renderViewport.height;
+          const offCtx = offscreen.getContext('2d');
+          if (!offCtx) return;
 
-        const renderTask = page.render(renderContext);
-        renderTaskRef.current = renderTask;
+          const renderTask = page.render({ canvasContext: offCtx, viewport: renderViewport });
+          renderTaskRef.current = renderTask;
+          await renderTask.promise;
 
-        await renderTask.promise;
+          if (!active) return;
+          const halfW = Math.floor(renderViewport.width / 2);
+          canvas.width = halfW;
+          canvas.height = renderViewport.height;
+
+          if (pagePart === 'left_half') {
+            ctx.drawImage(offscreen, 0, 0, halfW, renderViewport.height, 0, 0, halfW, renderViewport.height);
+          } else {
+            ctx.drawImage(offscreen, halfW, 0, renderViewport.width - halfW, renderViewport.height, 0, 0, halfW, renderViewport.height);
+          }
+        } else {
+          canvas.width = renderViewport.width;
+          canvas.height = renderViewport.height;
+          const renderContext = {
+            canvasContext: ctx,
+            viewport: renderViewport,
+          };
+          const renderTask = page.render(renderContext);
+          renderTaskRef.current = renderTask;
+          await renderTask.promise;
+        }
+
         if (active) {
           setLoading(false);
         }
@@ -111,7 +137,7 @@ const PDFPageThumbnail: React.FC<PDFPageThumbnailProps> = ({
         renderTaskRef.current.cancel();
       }
     };
-  }, [pdfDocument, pageIndex, rotation, cellWidthMm, cellHeightMm, settings]);
+  }, [pdfDocument, pageIndex, pagePart, rotation, cellWidthMm, cellHeightMm, settings]);
 
   // Compute percentage of page relative to cell dimensions
   let scale = 1;
@@ -153,6 +179,7 @@ const PDFPageThumbnail: React.FC<PDFPageThumbnailProps> = ({
 
 interface ImpositionPreviewProps {
   settings: ImpositionSettings;
+  onChangeSettings?: (settings: ImpositionSettings) => void;
   plan: ImposedSheet[];
   sourcePDFInfo: PDFSourceInfo | null;
   pdfDocProxy: pdfjs.PDFDocumentProxy | null;
@@ -160,6 +187,7 @@ interface ImpositionPreviewProps {
 
 export const ImpositionPreview: React.FC<ImpositionPreviewProps> = ({
   settings,
+  onChangeSettings,
   plan,
   sourcePDFInfo,
   pdfDocProxy,
@@ -167,6 +195,31 @@ export const ImpositionPreview: React.FC<ImpositionPreviewProps> = ({
   const { t } = useI18n();
   const [currentSheetIdx, setCurrentSheetIdx] = useState(0);
   const [showLightTable, setShowLightTable] = useState(false);
+
+  const handleToggleExclude = (sourceIdx: number) => {
+    if (!onChangeSettings) return;
+    const current = settings.excludedPageIndices || [];
+    if (current.includes(sourceIdx)) {
+      onChangeSettings({
+        ...settings,
+        excludedPageIndices: current.filter((idx) => idx !== sourceIdx),
+      });
+    } else {
+      onChangeSettings({
+        ...settings,
+        excludedPageIndices: [...current, sourceIdx],
+      });
+    }
+  };
+
+  // Reset sheet index to 0 when loading a different document
+  const lastDocNameRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (sourcePDFInfo?.name && sourcePDFInfo.name !== lastDocNameRef.current) {
+      lastDocNameRef.current = sourcePDFInfo.name;
+      setCurrentSheetIdx(0);
+    }
+  }, [sourcePDFInfo?.name]);
 
   // Keep sheet index within bounds
   useEffect(() => {
@@ -242,6 +295,45 @@ export const ImpositionPreview: React.FC<ImpositionPreviewProps> = ({
   const prevSheet = () => {
     if (currentSheetIdx > 0) {
       setCurrentSheetIdx(currentSheetIdx - 1);
+    }
+  };
+
+  const [sheetInput, setSheetInput] = useState<string>(String(currentSheetIdx + 1));
+
+  useEffect(() => {
+    setSheetInput(String(currentSheetIdx + 1));
+  }, [currentSheetIdx]);
+
+  const commitSheetChange = (valStr: string) => {
+    const val = parseInt(valStr, 10);
+    if (isNaN(val)) {
+      setSheetInput(String(currentSheetIdx + 1));
+      return;
+    }
+    const clamped = Math.max(1, Math.min(plan.length, val));
+    setCurrentSheetIdx(clamped - 1);
+    setSheetInput(String(clamped));
+  };
+
+  const handleSheetInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const raw = e.target.value;
+    setSheetInput(raw);
+    const val = parseInt(raw, 10);
+    if (!isNaN(val) && val >= 1 && val <= plan.length) {
+      setCurrentSheetIdx(val - 1);
+    }
+  };
+
+  const handleSheetInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      commitSheetChange(sheetInput);
+      (e.target as HTMLInputElement).blur();
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      nextSheet();
+    } else if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      prevSheet();
     }
   };
 
@@ -390,9 +482,24 @@ export const ImpositionPreview: React.FC<ImpositionPreviewProps> = ({
               <ChevronLeft className="w-4 h-4" />
             </button>
             
-            <span className="text-xs font-mono font-medium text-neutral-600 px-2 select-none">
-              {currentSheetIdx + 1} / {plan.length}
-            </span>
+            <div className="flex items-center gap-1 px-1 select-none">
+              <input
+                type="number"
+                min={1}
+                max={plan.length}
+                value={sheetInput}
+                onChange={handleSheetInputChange}
+                onBlur={() => commitSheetChange(sheetInput)}
+                onKeyDown={handleSheetInputKeyDown}
+                className="w-11 h-6 text-center text-xs font-mono font-bold text-neutral-900 bg-neutral-100/90 hover:bg-neutral-200/60 focus:bg-white border border-neutral-300 focus:border-neutral-900 focus:ring-1 focus:ring-neutral-900 rounded px-0.5 outline-hidden transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none cursor-text"
+                title="Escribe un número de pliego para saltar rápidamente (Enter o flechas arriba/abajo)"
+                id="input-sheet-number"
+                aria-label="Número de pliego actual"
+              />
+              <span className="text-xs font-mono font-medium text-neutral-400">
+                / {plan.length}
+              </span>
+            </div>
 
             <button
               onClick={nextSheet}
@@ -470,7 +577,12 @@ export const ImpositionPreview: React.FC<ImpositionPreviewProps> = ({
                   const pCellHPercent = (pCell.height / sheetH) * 100;
 
                   const pHasPage = pCell.sourcePageIndex !== null;
-                  const pPageLabel = pHasPage ? `Pág. ${pCell.sourcePageIndex! + 1}` : 'Blanco';
+                  let pPageLabel = pHasPage ? `Pág. ${pCell.sourcePageIndex! + 1}` : (pCell.isSpacerBlank ? 'Cortesía' : 'Blanco');
+                  if (pCell.pagePart === 'left_half') {
+                    pPageLabel += ' (Izq)';
+                  } else if (pCell.pagePart === 'right_half') {
+                    pPageLabel += ' (Der)';
+                  }
 
                   return (
                     <div
@@ -489,6 +601,7 @@ export const ImpositionPreview: React.FC<ImpositionPreviewProps> = ({
                           <PDFPageThumbnail
                             pdfDocument={pdfDocProxy}
                             pageIndex={pCell.sourcePageIndex!}
+                            pagePart={pCell.pagePart}
                             rotation={pCell.rotation}
                             cellWidthMm={pCell.width}
                             cellHeightMm={pCell.height}
@@ -529,38 +642,76 @@ export const ImpositionPreview: React.FC<ImpositionPreviewProps> = ({
               const cellHPercent = (cell.height / sheetH) * 100;
 
               const hasPage = cell.sourcePageIndex !== null;
-              const pageLabel = hasPage ? `Pág. ${cell.sourcePageIndex! + 1}` : 'Blanco';
+              let pageLabel = hasPage ? `Pág. ${cell.sourcePageIndex! + 1}` : (cell.isSpacerBlank ? 'Cortesía' : 'Blanco');
+              if (cell.pagePart === 'left_half') {
+                pageLabel += ' (Izq)';
+              } else if (cell.pagePart === 'right_half') {
+                pageLabel += ' (Der)';
+              }
               const headInfo = getHeadIndicator(cell.rotation);
 
               return (
                 <div
                   key={`${currentSheetIdx}-cell-${idx}`}
-                  className="absolute border border-neutral-200/90 bg-neutral-50 flex flex-col justify-between overflow-hidden"
+                  onClick={() => {
+                    if (hasPage && onChangeSettings) {
+                      handleToggleExclude(cell.sourcePageIndex!);
+                    }
+                  }}
+                  className={`absolute border border-neutral-200/90 bg-neutral-50 flex flex-col justify-between overflow-hidden transition-all ${
+                    hasPage ? 'cursor-pointer group hover:ring-2 hover:ring-rose-500/80 hover:border-rose-400' : ''
+                  }`}
                   style={{
                     left: `${cellLeft}%`,
                     top: `${cellTop}%`,
                     width: `${cellWPercent}%`,
                     height: `${cellHPercent}%`,
                   }}
+                  title={hasPage ? t.preview.clickToDisableTooltip : undefined}
                 >
+                  {/* Action badge on hover to disable page */}
+                  {hasPage && onChangeSettings && (
+                    <div className="absolute top-1 right-1 z-30 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                      <span className="flex items-center gap-1 bg-rose-600 text-white text-[9px] font-medium px-1.5 py-0.5 rounded shadow-xs">
+                        <EyeOff className="w-2.5 h-2.5" />
+                        <span>Desactivar</span>
+                      </span>
+                    </div>
+                  )}
+
                   {/* Actual Page Rendering */}
                   {hasPage && pdfDocProxy ? (
                     <PDFPageThumbnail
                       pdfDocument={pdfDocProxy}
                       pageIndex={cell.sourcePageIndex!}
+                      pagePart={cell.pagePart}
                       rotation={cell.rotation}
                       cellWidthMm={cell.width}
                       cellHeightMm={cell.height}
                       settings={settings}
                     />
                   ) : (
-                    <div className="w-full h-full flex flex-col items-center justify-center p-2 relative select-none bg-neutral-100/40">
+                    <div className="w-full h-full flex flex-col items-center justify-center p-2 relative select-none bg-neutral-100/40 text-center">
                       <svg className="absolute inset-0 w-full h-full text-neutral-200/70 pointer-events-none" preserveAspectRatio="none">
                         <line x1="0" y1="0" x2="100%" y2="100%" stroke="currentColor" strokeWidth="0.5" strokeDasharray="3 3" />
                         <line x1="100%" y1="0" x2="0" y2="100%" stroke="currentColor" strokeWidth="0.5" strokeDasharray="3 3" />
                       </svg>
-                      <span className="z-10 text-[10px] font-mono uppercase text-neutral-400 tracking-wider">
-                        Página en blanco
+                      <span className="z-10 text-[10px] font-mono uppercase tracking-wider">
+                        {cell.isSpacerBlank ? (
+                          <span className="text-amber-800 bg-amber-100/90 border border-amber-300 px-1.5 py-0.5 rounded text-[8.5px] font-bold shadow-2xs">
+                            {cell.spacerReason === 'spread_alignment_start'
+                              ? 'Cortesía (Alineación inicial)'
+                              : cell.spacerReason === 'front_cover_inside'
+                              ? 'Cortesía (Interior portada)'
+                              : cell.spacerReason === 'back_cover_inside'
+                              ? 'Cortesía (Interior contraportada)'
+                              : cell.spacerReason === 'signature_padding'
+                              ? 'Cortesía (Ajuste de pliego)'
+                              : 'Página de cortesía'}
+                          </span>
+                        ) : (
+                          <span className="text-neutral-400">Página en blanco</span>
+                        )}
                       </span>
                     </div>
                   )}
@@ -695,6 +846,86 @@ export const ImpositionPreview: React.FC<ImpositionPreviewProps> = ({
           </div>
         </div>
       </div>
+
+      {/* 2.5 LISTA DE PÁGINAS DESACTIVADAS CON SCROLL */}
+      {settings.excludedPageIndices && settings.excludedPageIndices.length > 0 && (
+        <div className="w-full max-w-[720px] bg-rose-50/60 border border-rose-200/80 rounded-xl p-3 flex flex-col gap-2.5 shadow-2xs">
+          <div className="flex items-center justify-between pb-1.5 border-b border-rose-200/60">
+            <div className="flex items-center gap-2">
+              <EyeOff className="w-4 h-4 text-rose-600 shrink-0" />
+              <div className="flex items-baseline gap-2">
+                <span className="text-xs font-bold text-neutral-900">
+                  {t.preview.disabledPagesTitle} ({settings.excludedPageIndices.length})
+                </span>
+                <span className="text-[10px] text-neutral-500 hidden sm:inline">
+                  • {t.preview.disabledPagesHint}
+                </span>
+              </div>
+            </div>
+            {settings.excludedPageIndices.length > 1 && onChangeSettings && (
+              <button
+                type="button"
+                onClick={() => onChangeSettings({ ...settings, excludedPageIndices: [] })}
+                className="text-[10px] font-semibold text-rose-700 hover:text-rose-900 bg-white hover:bg-rose-100 border border-rose-200 px-2 py-0.5 rounded cursor-pointer transition-all shadow-2xs"
+              >
+                {t.preview.restoreAll}
+              </button>
+            )}
+          </div>
+
+          {/* Scrollable list with horizontal scroll */}
+          <div className="flex items-center gap-2.5 overflow-x-auto pb-1 pt-0.5 scrollbar-thin">
+            {settings.excludedPageIndices
+              .slice()
+              .sort((a, b) => a - b)
+              .map((pageIdx) => {
+                return (
+                  <div
+                    key={`excluded-page-${pageIdx}`}
+                    onClick={() => handleToggleExclude(pageIdx)}
+                    title={t.preview.clickToEnableTooltip}
+                    className="group relative flex flex-col items-center shrink-0 w-20 bg-white border border-neutral-200 hover:border-emerald-500 hover:ring-2 hover:ring-emerald-200 rounded-lg p-1.5 shadow-2xs cursor-pointer transition-all select-none"
+                  >
+                    {/* Thumbnail preview */}
+                    <div className="w-full aspect-[3/4] bg-neutral-100 rounded flex items-center justify-center overflow-hidden border border-neutral-100 relative">
+                      {pdfDocProxy ? (
+                        <div className="w-full h-full opacity-60 group-hover:opacity-100 transition-opacity">
+                          <PDFPageThumbnail
+                            pdfDocument={pdfDocProxy}
+                            pageIndex={pageIdx}
+                            pagePart="full"
+                            rotation={0}
+                            cellWidthMm={40}
+                            cellHeightMm={55}
+                            settings={settings}
+                          />
+                        </div>
+                      ) : (
+                        <FileText className="w-5 h-5 text-neutral-400" />
+                      )}
+
+                      {/* Hover restore overlay */}
+                      <div className="absolute inset-0 bg-emerald-700/70 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center gap-0.5 transition-opacity rounded text-white">
+                        <RotateCcw className="w-4 h-4" />
+                        <span className="text-[8px] font-bold uppercase tracking-wider">Reactivar</span>
+                      </div>
+                    </div>
+
+                    {/* Page label and restore button */}
+                    <div className="flex items-center justify-between w-full mt-1.5 px-0.5">
+                      <span className="text-[10px] font-bold font-mono text-neutral-700">
+                        Pág. {pageIdx + 1}
+                      </span>
+                      <span className="text-[10px] text-emerald-600 font-bold group-hover:scale-125 transition-transform">
+                        ↺
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+          </div>
+        </div>
+      )}
 
       {/* Info & Orientation Guide */}
       <div className="mt-3 bg-white rounded-lg p-3 text-xs text-neutral-500 border border-neutral-200/80 flex gap-2 items-start select-none shadow-2xs">

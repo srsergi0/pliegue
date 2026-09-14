@@ -60,6 +60,10 @@ export interface Translations {
     signatureGroupDesc: string;
     allPagesInOne: string;
     pagesPerSignature: string;
+    splitDoubleSpreads: string;
+    splitDoubleSpreadsDesc: string;
+    doublePagesDetected: string;
+    courtesyPagesCount: string;
   };
   margins: {
     title: string;
@@ -111,6 +115,11 @@ export interface Translations {
     sourcePages: string;
     emptyPage: string;
     blankPagesNotice: string;
+    disabledPagesTitle: string;
+    disabledPagesHint: string;
+    clickToDisableTooltip: string;
+    clickToEnableTooltip: string;
+    restoreAll: string;
   };
   templates: {
     modalTitle: string;

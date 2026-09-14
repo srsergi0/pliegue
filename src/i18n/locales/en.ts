@@ -61,6 +61,10 @@ export const en: Translations = {
     signatureGroupDesc: 'Splits the publication into separate signatures for sewn binding.',
     allPagesInOne: 'All pages in a single booklet',
     pagesPerSignature: 'pages per signature',
+    splitDoubleSpreads: 'Split double spreads to facing internal pages (Manga)',
+    splitDoubleSpreadsDesc: 'Detects panoramic/landscape manga spreads, splits them into two halves, and ensures they land on facing internal pages when opening the booklet.',
+    doublePagesDetected: 'Panoramic spreads detected',
+    courtesyPagesCount: 'Courtesy blank pages added',
   },
   margins: {
     title: 'Margins & Spacing',
@@ -112,6 +116,11 @@ export const en: Translations = {
     sourcePages: 'source pages',
     emptyPage: 'Blank',
     blankPagesNotice: 'Blank pages added to complete signature.',
+    disabledPagesTitle: 'Disabled Pages',
+    disabledPagesHint: 'Click any page to reactivate it and re-include it into the imposition.',
+    clickToDisableTooltip: 'Click to disable page',
+    clickToEnableTooltip: 'Click to reactivate page',
+    restoreAll: 'Restore All',
   },
   templates: {
     modalTitle: 'Print Workshop Presets',

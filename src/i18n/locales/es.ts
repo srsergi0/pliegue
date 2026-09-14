@@ -61,6 +61,10 @@ export const es: Translations = {
     signatureGroupDesc: 'Divide el libro en cuadernillos individuales para encuadernación cosida.',
     allPagesInOne: 'Todas las páginas en un solo cuadernillo',
     pagesPerSignature: 'páginas por cuadernillo',
+    splitDoubleSpreads: 'Dividir páginas dobles en caras internas (Manga Spreads)',
+    splitDoubleSpreadsDesc: 'Detecta páginas apaisadas/dobles del manga, las divide en dos mitades y garantiza que queden enfrentadas (caras internas) al abrir el cuadernillo.',
+    doublePagesDetected: 'Páginas panorámicas detectadas',
+    courtesyPagesCount: 'Páginas de cortesía añadidas',
   },
   margins: {
     title: 'Márgenes y Separaciones',
@@ -112,6 +116,11 @@ export const es: Translations = {
     sourcePages: 'págs. de origen',
     emptyPage: 'En blanco',
     blankPagesNotice: 'Páginas en blanco agregadas para cuadernillo exacto.',
+    disabledPagesTitle: 'Páginas desactivadas',
+    disabledPagesHint: 'Haz clic en una página para reactivarla e incluirla de nuevo en el pliego.',
+    clickToDisableTooltip: 'Clic para desactivar página',
+    clickToEnableTooltip: 'Clic para reactivar página',
+    restoreAll: 'Reactivar todas',
   },
   templates: {
     modalTitle: 'Plantillas de Taller de Impresión',

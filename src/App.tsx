@@ -42,6 +42,8 @@ const DEFAULT_SETTINGS: ImpositionSettings = {
   signatureSize: 0,
   duplexItemMode: 'two_page_items',
   booklet4UpMode: 'cut_and_nest',
+  splitDoubleSpreads: false,
+  excludedPageIndices: [],
   pageRotation: 0,
   reverseRotation: 0,
   autoRotateToFit: true,
@@ -113,6 +115,7 @@ export default function App() {
       const pages: { width: number; height: number }[] = [];
       let firstW = 210;
       let firstH = 297;
+      let doublePageCount = 0;
 
       for (let i = 1; i <= pageCount; i++) {
         const page = await doc.getPage(i);
@@ -125,6 +128,9 @@ export default function App() {
           firstW = wMm;
           firstH = hMm;
         }
+        if (wMm > hMm * 1.15) {
+          doublePageCount++;
+        }
         pages.push({ width: wMm, height: hMm });
       }
 
@@ -132,6 +138,7 @@ export default function App() {
         name: fileName,
         size: fileSize,
         pageCount,
+        doublePageCount,
         firstPageWidth: firstW,
         firstPageHeight: firstH,
         pages,
@@ -139,6 +146,13 @@ export default function App() {
 
       setPdfBytes(storedBytes);
       setPdfDocProxy(doc);
+
+      // Reset document-specific settings from previous file
+      setSettings((prev) => ({
+        ...prev,
+        excludedPageIndices: [],
+        signatureSize: prev.signatureSize > pageCount ? 0 : prev.signatureSize,
+      }));
     } catch (err: any) {
       console.error('Error procesando PDF:', err);
       setErrorMsg(err.message || 'Error al decodificar el archivo PDF. Intenta con otro.');
@@ -285,6 +299,10 @@ export default function App() {
     setSourcePDFInfo(null);
     setErrorMsg(null);
     setSavedFilePath(null);
+    setSettings((prev) => ({
+      ...prev,
+      excludedPageIndices: [],
+    }));
   };
 
   // Compute imposition plan reactively based on settings and loaded PDF
@@ -642,6 +660,7 @@ export default function App() {
               <div className="flex-1">
                 <ImpositionPreview
                   settings={settings}
+                  onChangeSettings={setSettings}
                   plan={plan}
                   sourcePDFInfo={sourcePDFInfo}
                   pdfDocProxy={pdfDocProxy}

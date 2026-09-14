@@ -61,6 +61,10 @@ export const zh: Translations = {
     signatureGroupDesc: '将整书划分为独立折帖，适用于锁线胶装与精装书刊。',
     allPagesInOne: '所有页面合并为一个完整折帖',
     pagesPerSignature: '页/帖',
+    splitDoubleSpreads: '将双页跨页拆分为对开内页（漫画跨页）',
+    splitDoubleSpreadsDesc: '自动检测漫画中的横向全景跨页，将其拆分为两半，并确保在打开小册子时位于连续的内对开页。',
+    doublePagesDetected: '已检测到全景跨页',
+    courtesyPagesCount: '已添加的空白衬页/调整页',
   },
   margins: {
     title: '边距与间距设置',
@@ -112,6 +116,11 @@ export const zh: Translations = {
     sourcePages: '原始页面',
     emptyPage: '空白页',
     blankPagesNotice: '已自动填补空白页以凑齐完整折帖倍数。',
+    disabledPagesTitle: '已禁用的页面',
+    disabledPagesHint: '点击已禁用的页面卡片即可重新启用并放回拼版。',
+    clickToDisableTooltip: '点击以排除/禁用此页面',
+    clickToEnableTooltip: '点击以重新启用此页面',
+    restoreAll: '全部重新启用',
   },
   templates: {
     modalTitle: '印刷车间快捷模板',

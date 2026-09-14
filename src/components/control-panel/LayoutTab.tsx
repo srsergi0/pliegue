@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   ImpositionSettings,
   SHEET_PRESETS,
@@ -15,8 +15,10 @@ import {
 import {
   calculateOptimalTargetLayout,
   resolveTargetPageDimensions,
+  buildVirtualPageList,
 } from '../../utils/imposition';
-import { Scissors, Layers, Columns, BookOpen, Compass } from 'lucide-react';
+import { Scissors, Layers, Columns, BookOpen, Compass, Sparkles, FileText } from 'lucide-react';
+import { useI18n } from '../../i18n/I18nContext';
 
 interface LayoutTabProps {
   settings: ImpositionSettings;
@@ -29,6 +31,7 @@ export const LayoutTab: React.FC<LayoutTabProps> = ({
   onChangeSettings,
   sourcePDFInfo,
 }) => {
+  const { t } = useI18n();
   const updateSetting = <K extends keyof ImpositionSettings>(
     key: K,
     value: ImpositionSettings[K]
@@ -122,6 +125,16 @@ export const LayoutTab: React.FC<LayoutTabProps> = ({
   };
 
   const currentTarget = resolveTargetPageDimensions(settings, sourcePDFInfo);
+
+  const virtualPages = useMemo(
+    () => buildVirtualPageList(settings, sourcePDFInfo),
+    [settings, sourcePDFInfo]
+  );
+
+  const courtesyPagesCount = useMemo(
+    () => virtualPages.filter((p) => p.isSpacerBlank || p.sourcePageIndex === null).length,
+    [virtualPages]
+  );
 
   return (
     <div className="flex flex-col gap-3.5">
@@ -262,8 +275,8 @@ export const LayoutTab: React.FC<LayoutTabProps> = ({
               <div className="grid grid-cols-3 gap-1.5">
                 {[
                   { c: 2, r: 1, label: '2 págs (2×1)', desc: 'Medio pliego', minPages: 4 },
-                  { c: 2, r: 2, label: '4 págs (2×2)', desc: '4 en 1 pliego', minPages: 8 },
-                  { c: 4, r: 2, label: '8 págs (4×2)', desc: '8 en 1 pliego', minPages: 16 },
+                  { c: 2, r: 2, label: '4 págs (2×2)', desc: '4 en 1 pliego', minPages: 4 },
+                  { c: 4, r: 2, label: '8 págs (4×2)', desc: '8 en 1 pliego', minPages: 8 },
                 ].map((preset) => {
                   const isSelected = settings.gridCols === preset.c && settings.gridRows === preset.r;
                   const isDisabled = Boolean(sourcePDFInfo && sourcePDFInfo.pageCount < preset.minPages);
@@ -347,10 +360,10 @@ export const LayoutTab: React.FC<LayoutTabProps> = ({
                 >
                   <option value={0}>Todo en 1 cuadernillo</option>
                   {[
-                    { val: 4, label: '4 págs (1 pliego)' },
-                    { val: 8, label: '8 págs (2 pliegos)' },
-                    { val: 16, label: '16 págs (4 pliegos)' },
-                    { val: 32, label: '32 págs (8 pliegos)' },
+                    { val: 4, label: '4 págs (1 pliegue / folio)' },
+                    { val: 8, label: '8 págs (2 pliegues)' },
+                    { val: 16, label: '16 págs (4 pliegues)' },
+                    { val: 32, label: '32 págs (8 pliegues)' },
                   ]
                     .filter((opt) => !sourcePDFInfo || sourcePDFInfo.pageCount >= opt.val)
                     .map((opt) => (
@@ -361,6 +374,50 @@ export const LayoutTab: React.FC<LayoutTabProps> = ({
                 </select>
               </div>
             </div>
+
+            {/* Páginas Dobles Panorámicas / Manga Spreads */}
+            <div className="p-2.5 bg-white rounded-lg border border-neutral-200/90 flex flex-col gap-1.5 shadow-2xs">
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex items-start gap-2">
+                  <span className="text-base select-none mt-0.5">🎌</span>
+                  <div>
+                    <label htmlFor="split-double-spreads" className="text-xs font-bold text-neutral-800 cursor-pointer block leading-tight">
+                      {t.layout.splitDoubleSpreads}
+                    </label>
+                    <p className="text-[10px] text-neutral-500 leading-normal mt-0.5">
+                      {t.layout.splitDoubleSpreadsDesc}
+                    </p>
+                  </div>
+                </div>
+                <input
+                  type="checkbox"
+                  id="split-double-spreads"
+                  checked={settings.splitDoubleSpreads || false}
+                  onChange={(e) => updateSetting('splitDoubleSpreads', e.target.checked)}
+                  className="w-4 h-4 text-neutral-900 rounded border-neutral-300 focus:ring-neutral-400 cursor-pointer mt-0.5 shrink-0"
+                />
+              </div>
+
+              {sourcePDFInfo && (sourcePDFInfo.doublePageCount || 0) > 0 && (
+                <div className="flex flex-col gap-1 mt-1">
+                  <div className="flex items-center gap-1.5 text-[10px] text-indigo-700 bg-indigo-50 border border-indigo-200/80 px-2 py-1 rounded-md">
+                    <Sparkles className="w-3 h-3 shrink-0 text-indigo-600" />
+                    <span>
+                      {t.layout.doublePagesDetected}: <strong>{sourcePDFInfo.doublePageCount}</strong> {sourcePDFInfo.doublePageCount === 1 ? 'página' : 'páginas'}
+                    </span>
+                  </div>
+                  {courtesyPagesCount > 0 && (
+                    <div className="flex items-center gap-1.5 text-[10px] text-amber-800 bg-amber-50 border border-amber-200/80 px-2 py-1 rounded-md">
+                      <FileText className="w-3 h-3 shrink-0 text-amber-600" />
+                      <span>
+                        {t.layout.courtesyPagesCount}: <strong>{courtesyPagesCount}</strong> {courtesyPagesCount === 1 ? 'página' : 'páginas'}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
           </div>
         ) : (
           /* --- OPCIONES PARA NO-BOOKLET --- */
