@@ -141,7 +141,7 @@ function createWindow() {
 
   // En modo desarrollo, abrir la consola automáticamente
   if (isDev) {
-    mainWindow.webContents.openDevTools();
+    //mainWindow.webContents.openDevTools();
   }
 
   if (isDev) {

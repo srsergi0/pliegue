@@ -38,6 +38,7 @@ export const ja: Translations = {
     noPdfPrompt: '試すPDFが手元にありませんか？',
     generate8: 'テストPDFを生成（8ページ）',
     generate16: 'テストPDFを生成（16ページ）',
+    generate32: 'テストPDFを生成（32ページ）',
     viewAll: 'すべて見る',
     samplePageWord: 'ページ',
     sampleTitle: '面付けテスト用ドキュメント',

@@ -38,6 +38,7 @@ export const zh: Translations = {
     noPdfPrompt: '手头没有可测试的PDF吗？',
     generate8: '生成测试PDF（8页）',
     generate16: '生成测试PDF（16页）',
+    generate32: '生成测试PDF（32页）',
     viewAll: '查看全部',
     samplePageWord: '页面',
     sampleTitle: '拼版测试文档',

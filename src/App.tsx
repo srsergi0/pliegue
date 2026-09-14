@@ -760,6 +760,15 @@ export default function App() {
                   <FileCode className="w-3.5 h-3.5 text-neutral-500" />
                   <span>{t.welcome.generate16}</span>
                 </button>
+                <button
+                  onClick={() => handleLoadSamplePDF(32)}
+                  disabled={parsing}
+                  className="flex items-center gap-2 bg-neutral-100 hover:bg-neutral-200/80 text-neutral-700 border border-neutral-200 font-semibold text-xs px-4 py-2.5 rounded-lg transition-all cursor-pointer disabled:opacity-50"
+                  id="btn-sample-pdf-32"
+                >
+                  <FileCode className="w-3.5 h-3.5 text-neutral-500" />
+                  <span>{t.welcome.generate32}</span>
+                </button>
               </div>
             </div>
 

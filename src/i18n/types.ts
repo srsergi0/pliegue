@@ -37,6 +37,7 @@ export interface Translations {
     noPdfPrompt: string;
     generate8: string;
     generate16: string;
+    generate32: string;
     viewAll: string;
     samplePageWord: string;
     sampleTitle: string;

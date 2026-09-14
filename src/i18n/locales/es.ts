@@ -38,6 +38,7 @@ export const es: Translations = {
     noPdfPrompt: '¿No tienes un PDF a mano para probar?',
     generate8: 'Generar PDF de prueba (8 páginas)',
     generate16: 'Generar PDF de prueba (16 páginas)',
+    generate32: 'Generar PDF de prueba (32 páginas)',
     viewAll: 'Ver todas',
     samplePageWord: 'PÁGINA',
     sampleTitle: 'DOCUMENTO DE PRUEBA DE IMPOSICIÓN',
