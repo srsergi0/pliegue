@@ -84,6 +84,10 @@ export interface ImpositionSettings {
   
   // Manga / Spreads support
   splitDoubleSpreads: boolean; // divide panoramic double pages into 2 facing internal pages
+
+  // Cover courtesy blanks (Cara y Contracara)
+  blankAfterFrontCover?: boolean; // insert a courtesy blank right after the front cover (inside front cover)
+  blankBeforeBackCover?: boolean; // insert a blank before the back cover and pin the back cover to the booklet exterior
   
   // Excluded / disabled pages from imposition
   excludedPageIndices: number[]; // 0-based source page indices to omit

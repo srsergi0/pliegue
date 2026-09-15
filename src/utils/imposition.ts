@@ -58,12 +58,24 @@ function fill(template: string, vars: Record<string, string | number>): string {
 }
 
 /**
- * Builds the effective list of pages to impose.
+ * Builds the effective list of pages to impose (content order, before signature padding).
  * Supports:
- * 1. Manga / Spreads: Splits panoramic/landscape pages into two halves on facing internal pages.
- * 2. Cara y Contracara:
- *    - blankAfterFrontCover: Inserts a courtesy blank page right after the front cover (inside front cover).
- *    - blankBeforeBackCover: Inserts a blank page before the back cover and pins the back cover to the booklet exterior.
+ * 1. Manga / Spreads: Splits panoramic/landscape pages into two halves.
+ *    - The leading cover block (first source page, if panoramic) stays consecutive
+ *      at the start and is exempt from the interior odd-start rule.
+ *    - Interior doubles (all split pages except the leading cover block) keep
+ *      their halves contiguous and start at an ODD 0-based index.
+ *    - A trailing panoramic page is NOT assumed to be a simple back cover: its
+ *      halves stay together as one block. Cover courtesy blanks only apply to
+ *      single-page covers (see below).
+ * 2. Cara y Contracara (booklet only):
+ *    - blankAfterFrontCover: courtesy blank right after the front-cover block.
+ *    - blankBeforeBackCover: blank before a SINGLE back cover (skipped when the
+ *      trailing block is a panoramic double, which is not a simple back cover).
+ * Signature padding to the finishing multiple (4, or 8 for french_fold) is NOT
+ * done here; see prepareBookletSignatures(). Blank dimensions always come from
+ * the corresponding virtual page width, never from halving a source page whose
+ * splitting is disabled.
  */
 export function buildVirtualPageList(
   settings: ImpositionSettings,
@@ -81,111 +93,205 @@ export function buildVirtualPageList(
 
   if (activePageIndices.length === 0) return [];
 
+  const isBooklet = settings.layoutMode === 'booklet';
+  const split = !!settings.splitDoubleSpreads;
+  const isPanoramic = (w: number, h: number) => w > h * 1.15;
+  const dimOf = (idx: number) => sourcePDF.pages[idx] || { width: sourcePDF.firstPageWidth, height: sourcePDF.firstPageHeight };
+  const halfParts = (): [PagePart, PagePart] =>
+    settings.bindingEdge === 'right' ? ['right_half', 'left_half'] : ['left_half', 'right_half'];
+
   const list: VirtualPage[] = [];
 
-  // Edge case: single active page document
-  if (activePageIndices.length === 1) {
-    const pIdx = activePageIndices[0];
-    const page = sourcePDF.pages[pIdx] || { width: sourcePDF.firstPageWidth, height: sourcePDF.firstPageHeight };
-    list.push({
-      sourcePageIndex: pIdx,
-      part: 'full',
-      width: page.width,
-      height: page.height,
-    });
-    return list;
-  }
-
-  // 1. First Active Page (Front Cover / Cara)
+  // 1. First Active Page = front-cover block (no early return: a single active
+  // page goes through the same split logic so `splitDoubleSpreads` survives exclusions).
+  const n = activePageIndices.length;
   const firstIdx = activePageIndices[0];
-  const p0 = sourcePDF.pages[firstIdx] || { width: sourcePDF.firstPageWidth, height: sourcePDF.firstPageHeight };
-  const isDoubleP0 = settings.splitDoubleSpreads && (p0.width > p0.height * 1.15);
+  const p0 = dimOf(firstIdx);
+  const firstIsDouble = split && isPanoramic(p0.width, p0.height);
 
-  if (!isDoubleP0) {
-    list.push({
-      sourcePageIndex: firstIdx,
-      part: 'full',
-      width: p0.width,
-      height: p0.height,
-    });
+  if (!firstIsDouble) {
+    list.push({ sourcePageIndex: firstIdx, part: 'full', width: p0.width, height: p0.height });
   } else {
-    const firstPart: PagePart = settings.bindingEdge === 'right' ? 'right_half' : 'left_half';
-    const secondPart: PagePart = settings.bindingEdge === 'right' ? 'left_half' : 'right_half';
-    list.push({ sourcePageIndex: firstIdx, part: firstPart, width: p0.width / 2, height: p0.height });
-    list.push({ sourcePageIndex: firstIdx, part: secondPart, width: p0.width / 2, height: p0.height });
+    const [a, b] = halfParts();
+    list.push({ sourcePageIndex: firstIdx, part: a, width: p0.width / 2, height: p0.height });
+    list.push({ sourcePageIndex: firstIdx, part: b, width: p0.width / 2, height: p0.height });
+  }
+  const coverBlockLen = firstIsDouble ? 2 : 1;
+
+  // 1b. Courtesy blank inside the front cover (booklet only), placed AFTER the
+  // whole cover block so panoramic cover halves are never separated.
+  if (isBooklet && settings.blankAfterFrontCover && list.length >= 1) {
+    list.splice(coverBlockLen, 0, {
+      sourcePageIndex: null,
+      part: 'full',
+      width: list[0].width,
+      height: list[0].height,
+      isSpacerBlank: true,
+      spacerReason: 'front_cover_inside',
+    });
   }
 
-  // 1b. Alignment spacer moved to the BEGINNING of the book:
-  // Check if double spreads among remaining active pages require a parity shift so they start on facing internal pages.
-  if (settings.layoutMode === 'booklet' && settings.splitDoubleSpreads) {
-    let firstDoubleOffset = -1;
-    for (let k = 1; k < activePageIndices.length; k++) {
-      const pIdx = activePageIndices[k];
-      const page = sourcePDF.pages[pIdx] || { width: sourcePDF.firstPageWidth, height: sourcePDF.firstPageHeight };
-      if (page.width > page.height * 1.15) {
-        firstDoubleOffset = k;
-        break;
-      }
-    }
+  // 2. Remaining Active Pages. In booklet mode every split double started here
+  // must begin at an ODD 0-based index to sit on two facing pages; the parity
+  // is checked before EACH split (an odd run of singles between doubles would
+  // otherwise push the next double across a turn). The check runs at build time,
+  // after the front blank above, so later insertions (which all happen at or
+  // after the trailing block) cannot disturb interior parity.
+  for (let k = 1; k < n; k++) {
+    const pIdx = activePageIndices[k];
+    const page = dimOf(pIdx);
+    const isDouble = split && isPanoramic(page.width, page.height);
 
-    if (firstDoubleOffset !== -1) {
-      let pagesBeforeFirstSpread = list.length;
-      for (let k = 1; k < firstDoubleOffset; k++) {
-        const pIdx = activePageIndices[k];
-        const page = sourcePDF.pages[pIdx] || { width: sourcePDF.firstPageWidth, height: sourcePDF.firstPageHeight };
-        const isD = page.width > page.height * 1.15;
-        pagesBeforeFirstSpread += isD ? 2 : 1;
-      }
-
-      // In booklet imposition, facing internal pairs start at an ODD 0-based index (e.g. 1, 3, 5...)
-      // If pagesBeforeFirstSpread % 2 === 0, the spread would start on an even index and be split across turns.
-      // We insert an alignment courtesy page at the BEGINNING of the book so reading flow inside the story is never broken!
-      if (pagesBeforeFirstSpread % 2 === 0) {
+    if (!isDouble) {
+      list.push({ sourcePageIndex: pIdx, part: 'full', width: page.width, height: page.height });
+    } else {
+      if (isBooklet && list.length % 2 === 0) {
         list.push({
           sourcePageIndex: null,
           part: 'full',
-          width: p0.width / (isDoubleP0 ? 2 : 1),
-          height: p0.height,
+          width: page.width / 2,
+          height: page.height,
           isSpacerBlank: true,
           spacerReason: 'spread_alignment_start',
         });
       }
+      const [a, b] = halfParts();
+      list.push({ sourcePageIndex: pIdx, part: a, width: page.width / 2, height: page.height });
+      list.push({ sourcePageIndex: pIdx, part: b, width: page.width / 2, height: page.height });
     }
   }
 
-  // 2. Remaining Active Pages (Story pages: purely consecutive, no blank pages breaking reading rhythm!)
-  for (let k = 1; k < activePageIndices.length; k++) {
-    const pIdx = activePageIndices[k];
-    const page = sourcePDF.pages[pIdx] || { width: sourcePDF.firstPageWidth, height: sourcePDF.firstPageHeight };
-    const isDouble = settings.splitDoubleSpreads && (page.width > page.height * 1.15);
-
-    if (!isDouble) {
-      list.push({
-        sourcePageIndex: pIdx,
+  // 3. Courtesy blank inside the back cover (booklet only). It applies to a
+  // SINGLE back cover: when the trailing block is a panoramic double, that
+  // page is not a simple back cover (its halves form their own block), so no
+  // blank is forced between its halves. Dimensions come from the trailing
+  // virtual page, even when splitting is disabled.
+  if (isBooklet && settings.blankBeforeBackCover && n > 1 && list.length > 0) {
+    const last = list[list.length - 1];
+    const prev = list.length >= 2 ? list[list.length - 2] : null;
+    const trailingIsDouble =
+      !!prev &&
+      last.sourcePageIndex !== null &&
+      last.sourcePageIndex === prev.sourcePageIndex &&
+      last.part !== 'full' &&
+      prev.part !== 'full';
+    if (!trailingIsDouble) {
+      const at = list.length - 1;
+      list.splice(at, 0, {
+        sourcePageIndex: null,
         part: 'full',
-        width: page.width,
-        height: page.height,
-      });
-    } else {
-      const firstPart: PagePart = settings.bindingEdge === 'right' ? 'right_half' : 'left_half';
-      const secondPart: PagePart = settings.bindingEdge === 'right' ? 'left_half' : 'right_half';
-
-      list.push({
-        sourcePageIndex: pIdx,
-        part: firstPart,
-        width: page.width / 2,
-        height: page.height,
-      });
-      list.push({
-        sourcePageIndex: pIdx,
-        part: secondPart,
-        width: page.width / 2,
-        height: page.height,
+        width: last.width,
+        height: last.height,
+        isSpacerBlank: true,
+        spacerReason: 'back_cover_inside',
       });
     }
   }
 
   return list;
+}
+
+/**
+ * Finishing multiple for booklet signatures: 8 pages per french_fold sheet,
+ * 4 pages per spread everywhere else.
+ */
+export function getBookletSignatureUnit(settings: ImpositionSettings): number {
+  return (settings.booklet4UpMode || 'cut_and_nest') === 'french_fold' ? 8 : 4;
+}
+
+function makeSpacerBlanks(count: number, reason: SpacerReason, width: number, height: number): VirtualPage[] {
+  const out: VirtualPage[] = [];
+  for (let i = 0; i < count; i++) {
+    out.push({ sourcePageIndex: null, part: 'full', width, height, isSpacerBlank: true, spacerReason: reason });
+  }
+  return out;
+}
+
+/**
+ * Splits booklet content pages (as returned by buildVirtualPageList, courtesy
+ * blanks included, padding excluded) into per-signature local lists and pads
+ * each signature to its finishing multiple BEFORE any page table is generated.
+ *
+ * - `signatureSize` counts CONTENT entries per signature (arbitrary positive
+ *   integers allowed); each signature is then padded with `signature_padding`
+ *   blanks, so callers never use `sigStart = sig * sigStep` over a padded list.
+ * - Double-spread half pairs are never split across signatures.
+ * - Padding goes BEFORE the back-cover block of each signature (before the
+ *   `back_cover_inside` blank when present, else before the last page) so the
+ *   real back cover stays exterior. Exception: a trailing panoramic double
+ *   keeps its halves contiguous and facing, so pads are APPENDED after it.
+ * All three booklet branches (french_fold, duplicate_2up, cut_and_nest) consume
+ * these same prepared signatures.
+ */
+export function prepareBookletSignatures(
+  content: VirtualPage[],
+  settings: ImpositionSettings
+): VirtualPage[][] {
+  if (content.length === 0) return [];
+  const unit = getBookletSignatureUnit(settings);
+  const sigStep = settings.signatureSize > 0 ? settings.signatureSize : content.length;
+
+  // Group content into atomic items: a split pair stays together, everything
+  // else is a single item. Signatures are packed item by item.
+  const items: VirtualPage[][] = [];
+  for (let i = 0; i < content.length; i++) {
+    const cur = content[i];
+    const nxt = i + 1 < content.length ? content[i + 1] : null;
+    if (
+      nxt &&
+      cur.sourcePageIndex !== null &&
+      cur.sourcePageIndex === nxt.sourcePageIndex &&
+      cur.part !== 'full' &&
+      nxt.part !== 'full'
+    ) {
+      items.push([cur, nxt]);
+      i++;
+    } else {
+      items.push([cur]);
+    }
+  }
+
+  const chunks: VirtualPage[][] = [];
+  let cur: VirtualPage[] = [];
+  let curLen = 0;
+  const flush = () => {
+    if (cur.length > 0) chunks.push(cur);
+    cur = [];
+    curLen = 0;
+  };
+  for (const it of items) {
+    if (sigStep > 0 && curLen + it.length > sigStep && curLen > 0) flush();
+    cur.push(...it);
+    curLen += it.length;
+  }
+  flush();
+
+  return chunks.map((chunk) => {
+    const pad = (unit - (chunk.length % unit)) % unit;
+    if (pad === 0) return chunk;
+    const out = [...chunk];
+    const L = out.length;
+    const last = out[L - 1];
+    const prev = L >= 2 ? out[L - 2] : null;
+    const trailingIsDouble =
+      !!prev &&
+      last.sourcePageIndex !== null &&
+      last.sourcePageIndex === prev.sourcePageIndex &&
+      last.part !== 'full' &&
+      prev.part !== 'full';
+    const blanks = makeSpacerBlanks(pad, 'signature_padding', last.width, last.height);
+    if (trailingIsDouble) {
+      // Keep the facing halves contiguous and odd-started: pad after them.
+      out.push(...blanks);
+    } else {
+      // Pin the back cover exterior: pad before the back-cover block.
+      let at = out.length - 1;
+      const bi = out.findIndex((v) => v.spacerReason === 'back_cover_inside');
+      if (bi !== -1) at = bi;
+      out.splice(at, 0, ...blanks);
+    }
+    return out;
+  });
 }
 
 /**
@@ -217,10 +323,15 @@ export function resolveTargetPageDimensions(
   }
 
   if (settings.targetPagePreset === 'Custom') {
+    const w = settings.targetPageWidth;
+    const h = settings.targetPageHeight;
+    if (!Number.isFinite(w) || !Number.isFinite(h) || w <= 0 || h <= 0) {
+      throw new Error(`Invalid custom target page size: ${w} x ${h}`);
+    }
     return {
-      width: settings.targetPageWidth || 100,
-      height: settings.targetPageHeight || 100,
-      label: `Personalizado (${settings.targetPageWidth} × ${settings.targetPageHeight} mm)`,
+      width: w,
+      height: h,
+      label: `Personalizado (${w} × ${h} mm)`,
     };
   }
 
@@ -238,8 +349,33 @@ export function resolveTargetPageDimensions(
 }
 
 /**
+ * Shared rotation decision between the optimizer and the placer: rotate the
+ * page 90 deg exactly when the rotated orientation fits the cell better.
+ * Both orientations already include `pageRotation`; booklet callers keep the
+ * spine restriction by not offering rotation at all.
+ */
+export function shouldRotatePageToFit(
+  cellW: number,
+  cellH: number,
+  effW: number,
+  effH: number
+): boolean {
+  if (!(cellW > 0) || !(cellH > 0) || !(effW > 0) || !(effH > 0)) return false;
+  const fit0 = Math.min(cellW / effW, cellH / effH);
+  const fit90 = Math.min(cellW / effH, cellH / effW);
+  return fit90 > fit0;
+}
+
+/**
  * Calculates how many target pages fit on the specified sheet size,
  * optimizing columns, rows, orientation, and maximizing sheet usage.
+ *
+ * Target states: `auto` (preset `auto` or the explicit `(0, 0)` sentinel)
+ * reuses the current grid; any other target must be finite with both
+ * dimensions > 0, otherwise it is rejected (never confused with `auto`).
+ * A result with `totalFit: 0` is an explicit no-fit state: the returned grid
+ * is topologically valid (even columns in booklet, 2x2 for french_fold) but
+ * the caller must resolve it (e.g. scale down) before generating the plan.
  */
 export function calculateOptimalTargetLayout(
   sheetW: number,
@@ -255,8 +391,17 @@ export function calculateOptimalTargetLayout(
   totalFit: number;
   coveragePercent: number;
 } {
-  // If no target dimensions provided, fallback to current settings
-  if (targetW <= 0 || targetH <= 0 || sheetW <= 0 || sheetH <= 0) {
+  // Optimizer entry validation covers basic input values only (finite positive
+  // sheets, finite non-negative margins/gutters). The CURRENT grid is NOT
+  // validated here: it may be exactly what the caller wants replaced. Each
+  // candidate is validated geometrically before comparison, and the `auto`
+  // fallback below validates the reused grid explicitly.
+  validateSheetBasics(settings, sheetW, sheetH);
+
+  // Auto sentinel is the explicit (0, 0) (used with the `auto` preset).
+  // Anything else must be a fully valid target size.
+  if (targetW === 0 && targetH === 0) {
+    validateImpositionInputs(settings, sheetW, sheetH);
     return {
       cols: settings.gridCols,
       rows: settings.gridRows,
@@ -266,80 +411,159 @@ export function calculateOptimalTargetLayout(
       coveragePercent: 1,
     };
   }
+  if (!Number.isFinite(targetW) || !Number.isFinite(targetH) || targetW <= 0 || targetH <= 0) {
+    throw new Error(`Invalid target page size: ${targetW} x ${targetH}`);
+  }
 
   const sheetMin = Math.min(sheetW, sheetH);
   const sheetMax = Math.max(sheetW, sheetH);
-  const targetMin = Math.min(targetW, targetH);
-  const targetMax = Math.max(targetW, targetH);
 
   const isClose = (a: number, b: number) => Math.abs(a - b) <= 2.5;
+  const gutterH = Math.max(0, settings.gutterHorizontal || 0);
+  const gutterV = Math.max(0, settings.gutterVertical || 0);
+  const marginH = Math.max(0, settings.marginLeft || 0) + Math.max(0, settings.marginRight || 0);
+  const marginV = Math.max(0, settings.marginTop || 0) + Math.max(0, settings.marginBottom || 0);
 
-  // A4 sheet (210 x 297 mm)
-  if (isClose(sheetMin, 210) && isClose(sheetMax, 297)) {
-    // A5 target (148.5 x 210) -> 2 pages (2 cols x 1 row in landscape)
-    if (isClose(targetMin, 148.5) && isClose(targetMax, 210)) {
-      return { cols: 2, rows: 1, sheetOrientation: 'landscape', autoRotate: false, totalFit: 2, coveragePercent: 1 };
+  // Exact-size fit count inside the usable area (margins discounted).
+  const fitCount = (sW: number, sH: number, tW: number, tH: number): { cols: number; rows: number; total: number } => {
+    const usableW = sW - marginH;
+    const usableH = sH - marginV;
+    if (tW <= 0 || tH <= 0 || usableW <= 0 || usableH <= 0) return { cols: 0, rows: 0, total: 0 };
+    const cols = Math.floor((usableW + gutterH) / (tW + gutterH));
+    const rows = Math.floor((usableH + gutterV) / (tH + gutterV));
+    if (cols <= 0 || rows <= 0) return { cols: 0, rows: 0, total: 0 };
+    return { cols, rows, total: cols * rows };
+  };
+  const coverageOf = (sW: number, sH: number, total: number): number => {
+    if (total <= 0 || sW <= 0 || sH <= 0) return 0;
+    return (total * targetW * targetH) / (sW * sH);
+  };
+
+  // Effective target dimensions include the manual `pageRotation` for every
+  // mode (shared meaning with the placer, via isAngleLandscapeSwapping).
+  const swapBase = isAngleLandscapeSwapping(settings.pageRotation);
+  const baseTW = swapBase ? targetH : targetW;
+  const baseTH = swapBase ? targetW : targetH;
+
+  // Booklet layouts must keep the spine vertical: no isolated 90-degree
+  // auto-rotation (the placer disables it). french_fold is additionally locked
+  // to its 2x2 topology: the optimizer searches only inside it.
+  if (settings.layoutMode === 'booklet' && (settings.booklet4UpMode || 'cut_and_nest') === 'french_fold') {
+    const orientations: Array<'portrait' | 'landscape'> = ['landscape', 'portrait'];
+    let best = {
+      cols: 2,
+      rows: 2,
+      sheetOrientation: settings.sheetOrientation as 'portrait' | 'landscape',
+      autoRotate: false,
+      totalFit: 0,
+      coveragePercent: 0,
+    };
+    for (const orient of orientations) {
+      const sW = orient === 'landscape' ? sheetMax : sheetMin;
+      const sH = orient === 'landscape' ? sheetMin : sheetMax;
+      const f = fitCount(sW, sH, baseTW, baseTH);
+      if (f.cols < 2 || f.rows < 2) continue;
+      const cov = coverageOf(sW, sH, 4);
+      if (4 > best.totalFit || (best.totalFit === 4 && cov > best.coveragePercent)) {
+        best = { cols: 2, rows: 2, sheetOrientation: orient, autoRotate: false, totalFit: 4, coveragePercent: cov };
+      }
     }
-    // A6 target (105 x 148.5) -> 4 pages (2 cols x 2 rows in landscape)
-    if (isClose(targetMin, 105) && isClose(targetMax, 148.5)) {
-      return { cols: 2, rows: 2, sheetOrientation: 'landscape', autoRotate: true, totalFit: 4, coveragePercent: 1 };
-    }
-    // A7 target (74 x 105) -> 8 pages (4 cols x 2 rows in landscape)
-    if (isClose(targetMin, 74) && isClose(targetMax, 105)) {
-      return { cols: 4, rows: 2, sheetOrientation: 'landscape', autoRotate: false, totalFit: 8, coveragePercent: 1 };
-    }
-    // A8 target (52 x 74) -> 16 pages (4 cols x 4 rows in landscape)
-    if (isClose(targetMin, 52) && isClose(targetMax, 74)) {
-      return { cols: 4, rows: 4, sheetOrientation: 'landscape', autoRotate: true, totalFit: 16, coveragePercent: 1 };
-    }
-    // Business card (90 x 50) -> 10 or 12 cards (3 cols x 4 rows)
-    if (isClose(targetMin, 50) && isClose(targetMax, 90)) {
-      return { cols: 3, rows: 4, sheetOrientation: 'landscape', autoRotate: false, totalFit: 12, coveragePercent: 0.86 };
-    }
-    // Standard Card (85 x 55) -> 10 cards (5 cols x 2 rows)
-    if (isClose(targetMin, 55) && isClose(targetMax, 85)) {
-      return { cols: 5, rows: 2, sheetOrientation: 'landscape', autoRotate: true, totalFit: 10, coveragePercent: 0.75 };
-    }
+    // Explicit no-fit inside the 2x2 topology: valid grid, zero exact fits.
+    return best;
   }
 
-  // A3 sheet (297 x 420 mm)
-  if (isClose(sheetMin, 297) && isClose(sheetMax, 420)) {
-    // A4 target (210 x 297) -> 2 pages (2 cols x 1 row in landscape)
-    if (isClose(targetMin, 210) && isClose(targetMax, 297)) {
-      return { cols: 2, rows: 1, sheetOrientation: 'landscape', autoRotate: false, totalFit: 2, coveragePercent: 1 };
+  if (settings.layoutMode === 'booklet') {
+    const orientations: Array<'portrait' | 'landscape'> = ['landscape', 'portrait'];
+    let best = {
+      cols: 2,
+      rows: 1,
+      sheetOrientation: settings.sheetOrientation as 'portrait' | 'landscape',
+      autoRotate: false,
+      totalFit: 0,
+      coveragePercent: 0,
+    };
+    for (const orient of orientations) {
+      const sW = orient === 'landscape' ? sheetMax : sheetMin;
+      const sH = orient === 'landscape' ? sheetMin : sheetMax;
+      const f = fitCount(sW, sH, baseTW, baseTH);
+      // The geometric maximum may be odd: floor to the usable even count
+      // instead of discarding the whole orientation.
+      const evenCols = f.cols - (f.cols % 2);
+      if (evenCols < 2 || f.rows < 1) continue;
+      const total = evenCols * f.rows;
+      const cov = coverageOf(sW, sH, total);
+      if (total > best.totalFit || (total === best.totalFit && cov > best.coveragePercent)) {
+        best = { cols: evenCols, rows: f.rows, sheetOrientation: orient, autoRotate: false, totalFit: total, coveragePercent: cov };
+      }
     }
-    // A5 target (148.5 x 210) -> 4 pages (2 cols x 2 rows in landscape)
-    if (isClose(targetMin, 148.5) && isClose(targetMax, 210)) {
-      return { cols: 2, rows: 2, sheetOrientation: 'landscape', autoRotate: true, totalFit: 4, coveragePercent: 1 };
-    }
-    // A6 target (105 x 148.5) -> 8 pages (4 cols x 2 rows in landscape)
-    if (isClose(targetMin, 105) && isClose(targetMax, 148.5)) {
-      return { cols: 4, rows: 2, sheetOrientation: 'landscape', autoRotate: false, totalFit: 8, coveragePercent: 1 };
-    }
-    // A7 target (74 x 105) -> 16 pages (4 cols x 4 rows in landscape)
-    if (isClose(targetMin, 74) && isClose(targetMax, 105)) {
-      return { cols: 4, rows: 4, sheetOrientation: 'landscape', autoRotate: true, totalFit: 16, coveragePercent: 1 };
-    }
+    // No exact-size fit: return a valid booklet grid but signal zero exact fits
+    // so callers must reduce/scale instead of printing an oversized page.
+    return best;
   }
 
-  // Letter sheet (215.9 x 279.4 mm)
-  if (isClose(sheetMin, 215.9) && isClose(sheetMax, 279.4)) {
-    // HalfLetter target (139.7 x 215.9) -> 2 pages
-    if (isClose(targetMin, 139.7) && isClose(targetMax, 215.9)) {
-      return { cols: 2, rows: 1, sheetOrientation: 'landscape', autoRotate: false, totalFit: 2, coveragePercent: 1 };
-    }
+  interface SpecialPreset {
+    sheetMin: number;
+    sheetMax: number;
+    targetMin: number;
+    targetMax: number;
+    cols: number;
+    rows: number;
+    sheetOrientation: 'portrait' | 'landscape';
+    autoRotate: boolean;
+  }
+  const specials: SpecialPreset[] = [
+    { sheetMin: 210, sheetMax: 297, targetMin: 148.5, targetMax: 210, cols: 2, rows: 1, sheetOrientation: 'landscape', autoRotate: false },
+    { sheetMin: 210, sheetMax: 297, targetMin: 105, targetMax: 148.5, cols: 2, rows: 2, sheetOrientation: 'landscape', autoRotate: true },
+    { sheetMin: 210, sheetMax: 297, targetMin: 74, targetMax: 105, cols: 4, rows: 2, sheetOrientation: 'landscape', autoRotate: false },
+    { sheetMin: 210, sheetMax: 297, targetMin: 52, targetMax: 74, cols: 4, rows: 4, sheetOrientation: 'landscape', autoRotate: true },
+    { sheetMin: 210, sheetMax: 297, targetMin: 50, targetMax: 90, cols: 3, rows: 4, sheetOrientation: 'landscape', autoRotate: false },
+    { sheetMin: 210, sheetMax: 297, targetMin: 55, targetMax: 85, cols: 5, rows: 2, sheetOrientation: 'landscape', autoRotate: true },
+    { sheetMin: 297, sheetMax: 420, targetMin: 210, targetMax: 297, cols: 2, rows: 1, sheetOrientation: 'landscape', autoRotate: false },
+    { sheetMin: 297, sheetMax: 420, targetMin: 148.5, targetMax: 210, cols: 2, rows: 2, sheetOrientation: 'landscape', autoRotate: true },
+    { sheetMin: 297, sheetMax: 420, targetMin: 105, targetMax: 148.5, cols: 4, rows: 2, sheetOrientation: 'landscape', autoRotate: false },
+    { sheetMin: 297, sheetMax: 420, targetMin: 74, targetMax: 105, cols: 4, rows: 4, sheetOrientation: 'landscape', autoRotate: true },
+    { sheetMin: 215.9, sheetMax: 279.4, targetMin: 139.7, targetMax: 215.9, cols: 2, rows: 1, sheetOrientation: 'landscape', autoRotate: false },
+  ];
+
+  const targetMin = Math.min(targetW, targetH);
+  const targetMax = Math.max(targetW, targetH);
+  for (const sp of specials) {
+    if (!(isClose(sheetMin, sp.sheetMin) && isClose(sheetMax, sp.sheetMax))) continue;
+    if (!(isClose(targetMin, sp.targetMin) && isClose(targetMax, sp.targetMax))) continue;
+    const sW = sp.sheetOrientation === 'landscape' ? sheetMax : sheetMin;
+    const sH = sp.sheetOrientation === 'landscape' ? sheetMin : sheetMax;
+    const tW = sp.autoRotate ? baseTH : baseTW;
+    const tH = sp.autoRotate ? baseTW : baseTH;
+    // Validate against the usable area; a swapped target orientation is also
+    // accepted when it is the one that actually fits.
+    const direct = fitCount(sW, sH, tW, tH);
+    const swapped = fitCount(sW, sH, tH, tW);
+    const fitsDirect = direct.cols >= sp.cols && direct.rows >= sp.rows;
+    const fitsSwapped = swapped.cols >= sp.cols && swapped.rows >= sp.rows;
+    if (!fitsDirect && !fitsSwapped) continue;
+    const useSwapped = !fitsDirect && fitsSwapped;
+    const total = sp.cols * sp.rows;
+    return {
+      cols: sp.cols,
+      rows: sp.rows,
+      sheetOrientation: sp.sheetOrientation,
+      autoRotate: useSwapped ? !sp.autoRotate : sp.autoRotate,
+      totalFit: total,
+      coveragePercent: coverageOf(sW, sH, total),
+    };
   }
 
   // General algorithm for any sheet or target dimensions:
-  // Evaluates both sheet orientations and unrotated/rotated target orientations
-  // with a 2% scaling margin tolerance so printer boundaries don't drop whole rows/cols.
+  // Both sheet orientations and unrotated/rotated target orientations are
+  // evaluated inside the usable area (margins/gutters discounted). No 1.02
+  // overshoot and no forced minimum of one exact-size page.
   const orientations: Array<'portrait' | 'landscape'> = ['landscape', 'portrait'];
   let best = {
     cols: 1,
     rows: 1,
-    sheetOrientation: settings.sheetOrientation,
+    sheetOrientation: settings.sheetOrientation as 'portrait' | 'landscape',
     autoRotate: false,
-    totalFit: 1,
+    totalFit: 0,
     coveragePercent: 0,
   };
 
@@ -347,38 +571,36 @@ export function calculateOptimalTargetLayout(
     const sW = orient === 'landscape' ? sheetMax : sheetMin;
     const sH = orient === 'landscape' ? sheetMin : sheetMax;
 
-    // Check Candidate 1: Target unrotated (targetW x targetH)
-    const c1 = Math.max(1, Math.floor((sW * 1.02) / targetW));
-    const r1 = Math.max(1, Math.floor((sH * 1.02) / targetH));
-    const count1 = c1 * r1;
-    const cov1 = (count1 * targetW * targetH) / (sW * sH);
-
-    if (count1 > best.totalFit || (count1 === best.totalFit && cov1 > best.coveragePercent)) {
-      best = {
-        cols: c1,
-        rows: r1,
-        sheetOrientation: orient,
-        autoRotate: false,
-        totalFit: count1,
-        coveragePercent: cov1,
-      };
+    // Candidate 1: Target unrotated (effective base orientation, pageRotation applied)
+    const f1 = fitCount(sW, sH, baseTW, baseTH);
+    if (f1.total > 0) {
+      const cov1 = coverageOf(sW, sH, f1.total);
+      if (f1.total > best.totalFit || (f1.total === best.totalFit && cov1 > best.coveragePercent)) {
+        best = {
+          cols: f1.cols,
+          rows: f1.rows,
+          sheetOrientation: orient,
+          autoRotate: false,
+          totalFit: f1.total,
+          coveragePercent: cov1,
+        };
+      }
     }
 
-    // Check Candidate 2: Target rotated 90 deg (targetH x targetW)
-    const c2 = Math.max(1, Math.floor((sW * 1.02) / targetH));
-    const r2 = Math.max(1, Math.floor((sH * 1.02) / targetW));
-    const count2 = c2 * r2;
-    const cov2 = (count2 * targetW * targetH) / (sW * sH);
-
-    if (count2 > best.totalFit || (count2 === best.totalFit && cov2 > best.coveragePercent)) {
-      best = {
-        cols: c2,
-        rows: r2,
-        sheetOrientation: orient,
-        autoRotate: true,
-        totalFit: count2,
-        coveragePercent: cov2,
-      };
+    // Candidate 2: Target rotated 90 deg (effective base orientation swapped)
+    const f2 = fitCount(sW, sH, baseTH, baseTW);
+    if (f2.total > 0) {
+      const cov2 = coverageOf(sW, sH, f2.total);
+      if (f2.total > best.totalFit || (f2.total === best.totalFit && cov2 > best.coveragePercent)) {
+        best = {
+          cols: f2.cols,
+          rows: f2.rows,
+          sheetOrientation: orient,
+          autoRotate: true,
+          totalFit: f2.total,
+          coveragePercent: cov2,
+        };
+      }
     }
   }
 
@@ -394,15 +616,21 @@ function normalizeRotation(angle: number): 0 | 90 | 180 | 270 {
 
 /**
  * A vertical turn axis mirrors columns; a horizontal turn axis mirrors rows.
- * Long/short edge refer to the physical sheet, not fixed screen axes.
+ * Long/short edge refer to the physical sheet, not fixed screen axes:
+ * a long-edge turn mirrors columns on portrait sheets but rows on landscape
+ * sheets; a short-edge turn does the opposite.
  */
 function isBackSideHorizontallyMirrored(settings: ImpositionSettings): boolean {
   // Explicit back faces in sheetwise/manual printing use a book turn by default.
   if (settings.duplexMode === 'simplex') return true;
 
   const { width, height } = getEffectiveSheetDimensions(settings);
-  const isLandscape = width > height;
-  return settings.duplexMode === 'short_edge' ? isLandscape : !isLandscape;
+  const isPortrait = height >= width;
+  // Portrait: long_edge = vertical (book) axis -> mirror columns.
+  // Landscape: short_edge = vertical axis -> mirror columns.
+  return isPortrait
+    ? settings.duplexMode === 'long_edge'
+    : settings.duplexMode === 'short_edge';
 }
 
 /**
@@ -412,11 +640,6 @@ function calculateBackSideRotation(
   frontRotation: number,
   settings: ImpositionSettings
 ): 0 | 90 | 180 | 270 {
-  // First reflect the natural rotation (including auto-fit and fold offsets).
-  // A vertical-axis turn gives -theta; a horizontal-axis turn gives 180 - theta.
-  // Thus landscape booklets naturally use short-edge turns, while portrait
-  // booklets naturally use long-edge turns. Left/right binding changes page order,
-  // not the turn axis. Apply the user's back-only correction last, exactly once.
   const turnRotation = isBackSideHorizontallyMirrored(settings) ? 0 : 180;
   return normalizeRotation(turnRotation - frontRotation + (settings.reverseRotation || 0));
 }
@@ -457,21 +680,19 @@ export function calculateCellPlacement(
   let finalRotation = baseRotation;
 
   // 2. Intelligent Auto-rotate
-  if (settings.autoRotateToFit) {
+  // In booklet mode, spreads are paired horizontally [Left | Right] across facing columns.
+  // Automatically rotating individual cells by 90 degrees breaks the spine orientation
+  // (the spine moves to the top/bottom horizontal edge while the fold line remains vertical).
+  // Therefore, autoRotateToFit is disabled in booklet mode to guarantee the spine is on the fold line.
+  if (settings.autoRotateToFit && settings.layoutMode !== 'booklet') {
     const isSwapped = isAngleLandscapeSwapping(baseRotation);
     const effW = isSwapped ? sourcePageHeight : sourcePageWidth;
     const effH = isSwapped ? sourcePageWidth : sourcePageHeight;
 
-    const cellAspect = cellWidth / cellHeight;
-    const pageAspect = effW / effH;
-
-    const isCellLandscape = cellAspect > 1.05;
-    const isPageLandscape = pageAspect > 1.05;
-    const isCellPortrait = cellAspect < 0.95;
-    const isPagePortrait = pageAspect < 0.95;
-
-    // If one is landscape and the other is portrait, rotate 90 degrees clockwise to fit better
-    if ((isCellLandscape && isPagePortrait) || (isCellPortrait && isPageLandscape)) {
+    // Shared decision with the optimizer: rotate exactly when the rotated
+    // orientation fits this cell better (works for near-square proportions
+    // where aspect thresholds would refuse a useful rotation).
+    if (shouldRotatePageToFit(cellWidth, cellHeight, effW, effH)) {
       finalRotation = normalizeRotation(baseRotation + 90);
     }
   }
@@ -524,6 +745,84 @@ export function calculateCellPlacement(
 }
 
 /**
+ * Basic sheet/input validation for the optimizer entry: finite positive sheet
+ * dimensions and finite non-negative margins/gutters. It deliberately does NOT
+ * check the current grid (which the optimizer may be about to replace) nor the
+ * usable area of any particular grid; candidates are checked geometrically.
+ */
+function validateSheetBasics(
+  settings: ImpositionSettings,
+  sheetW: number,
+  sheetH: number
+): void {
+  const fail = (msg: string): never => {
+    throw new Error(msg);
+  };
+  if (!Number.isFinite(sheetW) || sheetW <= 0) fail(`Invalid sheet width: ${sheetW}`);
+  if (!Number.isFinite(sheetH) || sheetH <= 0) fail(`Invalid sheet height: ${sheetH}`);
+  for (const [name, v] of [
+    ['marginLeft', settings.marginLeft],
+    ['marginRight', settings.marginRight],
+    ['marginTop', settings.marginTop],
+    ['marginBottom', settings.marginBottom],
+    ['gutterHorizontal', settings.gutterHorizontal],
+    ['gutterVertical', settings.gutterVertical],
+  ] as const) {
+    if (!Number.isFinite(v) || v < 0) fail(`Invalid ${name}: ${v}`);
+  }
+  if (!Number.isInteger(settings.signatureSize) || !Number.isFinite(settings.signatureSize) || settings.signatureSize < 0) {
+    fail(`Invalid signatureSize: ${settings.signatureSize}`);
+  }
+}
+
+/**
+ * Validates grid geometry and sheet limits shared by the planner and the optimizer.
+ * Rejects invalid entries instead of hiding them with clamping or fallbacks.
+ */
+function validateImpositionInputs(
+  settings: ImpositionSettings,
+  sheetW: number,
+  sheetH: number
+): void {
+  const fail = (msg: string): never => {
+    throw new Error(msg);
+  };
+  if (!Number.isFinite(sheetW) || sheetW <= 0) fail(`Invalid sheet width: ${sheetW}`);
+  if (!Number.isFinite(sheetH) || sheetH <= 0) fail(`Invalid sheet height: ${sheetH}`);
+  if (!Number.isInteger(settings.gridCols) || !Number.isFinite(settings.gridCols) || settings.gridCols < 1) {
+    fail(`Invalid gridCols: ${settings.gridCols}`);
+  }
+  if (!Number.isInteger(settings.gridRows) || !Number.isFinite(settings.gridRows) || settings.gridRows < 1) {
+    fail(`Invalid gridRows: ${settings.gridRows}`);
+  }
+  if (settings.layoutMode === 'booklet') {
+    if (settings.gridCols < 2 || settings.gridCols % 2 === 1) {
+      fail(`Booklet mode requires an even gridCols >= 2 (got ${settings.gridCols})`);
+    }
+  }
+  if (!Number.isInteger(settings.signatureSize) || !Number.isFinite(settings.signatureSize) || settings.signatureSize < 0) {
+    fail(`Invalid signatureSize: ${settings.signatureSize}`);
+  }
+  for (const [name, v] of [
+    ['marginLeft', settings.marginLeft],
+    ['marginRight', settings.marginRight],
+    ['marginTop', settings.marginTop],
+    ['marginBottom', settings.marginBottom],
+    ['gutterHorizontal', settings.gutterHorizontal],
+    ['gutterVertical', settings.gutterVertical],
+  ] as const) {
+    if (!Number.isFinite(v) || v < 0) fail(`Invalid ${name}: ${v}`);
+  }
+  const cols = settings.gridCols;
+  const rows = settings.gridRows;
+  const usableW = sheetW - settings.marginLeft - settings.marginRight - (cols - 1) * settings.gutterHorizontal;
+  const usableH = sheetH - settings.marginTop - settings.marginBottom - (rows - 1) * settings.gutterVertical;
+  if (!(usableW > 0) || !(usableH > 0)) {
+    fail(`Unusable sheet area: margins/gutters leave ${usableW.toFixed(2)} x ${usableH.toFixed(2)} mm`);
+  }
+}
+
+/**
  * Builds the sheet layouts mapping source pages to output sheets.
  */
 export function generateImpositionPlan(
@@ -533,6 +832,19 @@ export function generateImpositionPlan(
 ): ImposedSheet[] {
   if (!sourcePDF || sourcePDF.pageCount === 0) {
     return [];
+  }
+
+  {
+    const { width: _vw, height: _vh } = getEffectiveSheetDimensions(settings);
+    validateImpositionInputs(settings, _vw, _vh);
+  }
+  if (settings.layoutMode === 'booklet' && settings.duplexMode === 'simplex') {
+    throw new Error('Booklet imposition requires duplex printing: fronts and backs are both needed; simplex would silently drop half the pages.');
+  }
+  if (settings.layoutMode === 'booklet' && (settings.booklet4UpMode || 'cut_and_nest') === 'french_fold') {
+    if (settings.gridCols !== 2 || settings.gridRows !== 2) {
+      throw new Error('french_fold is only defined for a 2x2 grid; refusing to silently fall back to cut_and_nest.');
+    }
   }
 
   const virtualPages = buildVirtualPageList(settings, sourcePDF);
@@ -575,8 +887,8 @@ export function generateImpositionPlan(
     // entire reverse layout 180 degrees, not just the artwork in each cell.
     // Its angular correction is already included by calculateBackSideRotation.
     if (isBackSide && settings.layoutMode === 'booklet' && !mirrorBackHorizontally) {
-      c = Math.max(2, settings.gridCols) - 1 - c;
-      r = Math.max(1, settings.gridRows) - 1 - r;
+      c = settings.gridCols - 1 - c;
+      r = settings.gridRows - 1 - r;
     }
 
     const x = marginLeft + c * (cellW + gutterH);
@@ -608,19 +920,65 @@ export function generateImpositionPlan(
     };
   };
 
+  // Entry-based cell builder for prepared per-signature lists. Null renders an
+  // empty (non-blank) cell; spacer blanks keep their reason.
+  const createCellFromEntry = (
+    c: number,
+    r: number,
+    entry: VirtualPage | null,
+    cellW: number,
+    cellH: number,
+    marginLeft: number,
+    marginTop: number,
+    gutterH: number,
+    gutterV: number,
+    isBackSide: boolean,
+    extraRotation: number = 0
+  ): ImpositionCell => {
+    let cc = c;
+    let rr = r;
+    if (isBackSide && settings.layoutMode === 'booklet' && !mirrorBackHorizontally) {
+      cc = settings.gridCols - 1 - cc;
+      rr = settings.gridRows - 1 - rr;
+    }
+    const x = marginLeft + cc * (cellW + gutterH);
+    const y = marginTop + rr * (cellH + gutterV);
+    const dims = entry ? { w: entry.width, h: entry.height } : { w: cellW, h: cellH };
+    const placement = calculateCellPlacement(cellW, cellH, dims.w, dims.h, settings, false);
+    const naturalRotation = normalizeRotation(placement.rotate + extraRotation);
+    const finalRot = isBackSide
+      ? calculateBackSideRotation(naturalRotation, settings)
+      : naturalRotation;
+    return {
+      colIndex: cc,
+      rowIndex: rr,
+      sourcePageIndex: entry && entry.sourcePageIndex !== null ? entry.sourcePageIndex : null,
+      pagePart: entry?.part ?? 'full',
+      isSpacerBlank: entry?.isSpacerBlank ?? false,
+      spacerReason: entry?.spacerReason,
+      rotation: finalRot,
+      x,
+      y,
+      width: cellW,
+      height: cellH,
+    };
+  };
+
   // -------------------------------------------------------------
   // MODE 1: FOLLETO / CUADERNILLO (BOOKLET / SADDLE STITCH & SIGNATURES)
   // Supports 2 pages/face (2x1) AND 4 pages/face (2x2, 4x1) or any grid!
   // -------------------------------------------------------------
   if (settings.layoutMode === 'booklet') {
-    const cols = Math.max(2, settings.gridCols);
-    const rows = Math.max(1, settings.gridRows);
-    const spreadCols = Math.max(1, Math.floor(cols / 2));
+    // Inputs already validated: gridCols is an even integer >= 2, gridRows >= 1,
+    // and the usable area is strictly positive. No clamping here.
+    const cols = settings.gridCols;
+    const rows = settings.gridRows;
+    const spreadCols = Math.floor(cols / 2);
     const spreadsPerSheet = spreadCols * rows;
     const pagesPerSheet = 4 * spreadsPerSheet; // e.g. 2 cols x 2 rows = 8 pages/sheet
 
-    const availW = Math.max(1, sheetW - settings.marginLeft - settings.marginRight - (cols - 1) * settings.gutterHorizontal);
-    const availH = Math.max(1, sheetH - settings.marginTop - settings.marginBottom - (rows - 1) * settings.gutterVertical);
+    const availW = sheetW - settings.marginLeft - settings.marginRight - (cols - 1) * settings.gutterHorizontal;
+    const availH = sheetH - settings.marginTop - settings.marginBottom - (rows - 1) * settings.gutterVertical;
     const bCellW = availW / cols;
     const bCellH = availH / rows;
 
@@ -632,44 +990,59 @@ export function generateImpositionPlan(
 
     let globalSheetNumber = 1;
 
-    // Check if French fold mode is chosen (only valid for 2 cols x 2 rows:
-    // its 8-page head-to-head table is hardwired to that grid)
+    // French fold: only defined for the hardwired 2x2 eight-page table. Any other
+    // grid was rejected upfront; larger signatures are nested as ONE folded
+    // signature (outer/inner sheets computed against the whole padded signature).
     const isFrenchFoldGrid = cols === 2 && rows === 2;
     if (spreadsPerSheet >= 2 && booklet4Up === 'french_fold' && isFrenchFoldGrid) {
-      const sigStep = settings.signatureSize > 0 ? settings.signatureSize : totalPages;
-      const totalSignatures = Math.ceil(totalPages / sigStep);
+      // All french_fold signatures share one prepared pipeline: content is
+      // chunked per signatureSize and each signature is padded to a multiple
+      // of 8 BEFORE its table is generated, with pads before the back-cover
+      // block — so the back cover always ends the (padded) signature.
+      const signatures = prepareBookletSignatures(virtualPages, settings);
 
-      for (let sig = 0; sig < totalSignatures; sig++) {
-        const sigStart = sig * sigStep;
-        const sigPageCount = Math.min(sigStep, totalPages - sigStart);
-        const sigPaddedCount = Math.ceil(sigPageCount / 8) * 8;
-        const sigSheets = sigPaddedCount / 8;
+      for (const sig of signatures) {
+        const N = sig.length;
+        const sigSheets = N / 8;
 
         for (let s = 0; s < sigSheets; s++) {
-          const base = sigStart + s * 8;
-          const getP = (offset: number) => {
-            const p = base + offset;
-            return (p < sigStart + sigPageCount && p < totalPages) ? p : null;
+          // Relative indices against the whole padded signature so sheet 0 of a
+          // 16/32-page signature receives the outermost pages (incl. the last).
+          // For N=8 this reduces to [0..7], preserving the classic table.
+          const rel = [
+            2 * s,
+            2 * s + 1,
+            N / 2 - 2 * s - 2,
+            N / 2 - 2 * s - 1,
+            N / 2 + 2 * s,
+            N / 2 + 2 * s + 1,
+            N - 2 * s - 2,
+            N - 2 * s - 1,
+          ];
+          const getEntry = (slot: number): VirtualPage | null => {
+            const r = rel[slot];
+            if (r < 0 || r >= N) return null;
+            return sig[r] ?? null;
           };
 
           // 8-page French fold signature (Top row is rotated 180 head-to-head)
-          const p1 = getP(0);
-          const p2 = getP(1);
-          const p3 = getP(2);
-          const p4 = getP(3);
-          const p5 = getP(4);
-          const p6 = getP(5);
-          const p7 = getP(6);
-          const p8 = getP(7);
+          const p1 = getEntry(0);
+          const p2 = getEntry(1);
+          const p3 = getEntry(2);
+          const p4 = getEntry(3);
+          const p5 = getEntry(4);
+          const p6 = getEntry(5);
+          const p7 = getEntry(6);
+          const p8 = getEntry(7);
 
           // Front side:
           // Row 0: P5 (rot 180), P4 (rot 180)
           // Row 1: P8, P1
           const frontCells: ImpositionCell[] = [
-            createCell(0, 0, settings.bindingEdge === 'right' ? p4 : p5, bCellW, bCellH, settings.marginLeft, settings.marginTop, settings.gutterHorizontal, settings.gutterVertical, false, 180),
-            createCell(1, 0, settings.bindingEdge === 'right' ? p5 : p4, bCellW, bCellH, settings.marginLeft, settings.marginTop, settings.gutterHorizontal, settings.gutterVertical, false, 180),
-            createCell(0, 1, settings.bindingEdge === 'right' ? p1 : p8, bCellW, bCellH, settings.marginLeft, settings.marginTop, settings.gutterHorizontal, settings.gutterVertical, false, 0),
-            createCell(1, 1, settings.bindingEdge === 'right' ? p8 : p1, bCellW, bCellH, settings.marginLeft, settings.marginTop, settings.gutterHorizontal, settings.gutterVertical, false, 0),
+            createCellFromEntry(0, 0, settings.bindingEdge === 'right' ? p4 : p5, bCellW, bCellH, settings.marginLeft, settings.marginTop, settings.gutterHorizontal, settings.gutterVertical, false, 180),
+            createCellFromEntry(1, 0, settings.bindingEdge === 'right' ? p5 : p4, bCellW, bCellH, settings.marginLeft, settings.marginTop, settings.gutterHorizontal, settings.gutterVertical, false, 180),
+            createCellFromEntry(0, 1, settings.bindingEdge === 'right' ? p1 : p8, bCellW, bCellH, settings.marginLeft, settings.marginTop, settings.gutterHorizontal, settings.gutterVertical, false, 0),
+            createCellFromEntry(1, 1, settings.bindingEdge === 'right' ? p8 : p1, bCellW, bCellH, settings.marginLeft, settings.marginTop, settings.gutterHorizontal, settings.gutterVertical, false, 0),
           ];
 
           sheets.push({
@@ -685,10 +1058,10 @@ export function generateImpositionPlan(
             // Row 0: P3 (rot 180), P6 (rot 180)
             // Row 1: P2, P7
             const backCells: ImpositionCell[] = [
-              createCell(0, 0, settings.bindingEdge === 'right' ? p6 : p3, bCellW, bCellH, backMarginLeft, backMarginTop, settings.gutterHorizontal, settings.gutterVertical, true, 180),
-              createCell(1, 0, settings.bindingEdge === 'right' ? p3 : p6, bCellW, bCellH, backMarginLeft, backMarginTop, settings.gutterHorizontal, settings.gutterVertical, true, 180),
-              createCell(0, 1, settings.bindingEdge === 'right' ? p7 : p2, bCellW, bCellH, backMarginLeft, backMarginTop, settings.gutterHorizontal, settings.gutterVertical, true, 0),
-              createCell(1, 1, settings.bindingEdge === 'right' ? p2 : p7, bCellW, bCellH, backMarginLeft, backMarginTop, settings.gutterHorizontal, settings.gutterVertical, true, 0),
+              createCellFromEntry(0, 0, settings.bindingEdge === 'right' ? p6 : p3, bCellW, bCellH, backMarginLeft, backMarginTop, settings.gutterHorizontal, settings.gutterVertical, true, 180),
+              createCellFromEntry(1, 0, settings.bindingEdge === 'right' ? p3 : p6, bCellW, bCellH, backMarginLeft, backMarginTop, settings.gutterHorizontal, settings.gutterVertical, true, 180),
+              createCellFromEntry(0, 1, settings.bindingEdge === 'right' ? p7 : p2, bCellW, bCellH, backMarginLeft, backMarginTop, settings.gutterHorizontal, settings.gutterVertical, true, 0),
+              createCellFromEntry(1, 1, settings.bindingEdge === 'right' ? p2 : p7, bCellW, bCellH, backMarginLeft, backMarginTop, settings.gutterHorizontal, settings.gutterVertical, true, 0),
             ];
 
             sheets.push({
@@ -709,34 +1082,30 @@ export function generateImpositionPlan(
 
     // Duplicate mode (2 or more identical copies of the booklet spreads on each sheet)
     if (spreadsPerSheet >= 2 && booklet4Up === 'duplicate_2up') {
-      const sigStep = settings.signatureSize > 0 ? settings.signatureSize : totalPages;
-      const totalSignatures = Math.ceil(totalPages / sigStep);
+      const signatures = prepareBookletSignatures(virtualPages, settings);
 
-      for (let sig = 0; sig < totalSignatures; sig++) {
-        const sigStart = sig * sigStep;
-        const sigPageCount = Math.min(sigStep, totalPages - sigStart);
-        const sigPaddedCount = Math.ceil(sigPageCount / 4) * 4;
-        const sigSheets = sigPaddedCount / 4;
+      for (const sig of signatures) {
+        const N = sig.length;
+        const sigSheets = N / 4;
 
         for (let s = 0; s < sigSheets; s++) {
-          let flPageIdx: number | null = sigStart + (sigPaddedCount - 2 * s - 1);
-          let frPageIdx: number | null = sigStart + (2 * s);
-          if (flPageIdx >= sigStart + sigPageCount || flPageIdx >= totalPages) flPageIdx = null;
-          if (frPageIdx >= sigStart + sigPageCount || frPageIdx >= totalPages) frPageIdx = null;
+          const at = (r: number): VirtualPage | null => (r < 0 || r >= N ? null : sig[r] ?? null);
+          const flEntry = at(N - 2 * s - 1);
+          const frEntry = at(2 * s);
 
-          let col0Front = flPageIdx;
-          let col1Front = frPageIdx;
+          let col0Front = flEntry;
+          let col1Front = frEntry;
           if (settings.bindingEdge === 'right') {
-            col0Front = frPageIdx;
-            col1Front = flPageIdx;
+            col0Front = frEntry;
+            col1Front = flEntry;
           }
 
           const frontCells: ImpositionCell[] = [];
           for (let r = 0; r < rows; r++) {
             for (let sc = 0; sc < spreadCols; sc++) {
               frontCells.push(
-                createCell(sc * 2, r, col0Front, bCellW, bCellH, settings.marginLeft, settings.marginTop, settings.gutterHorizontal, settings.gutterVertical, false),
-                createCell(sc * 2 + 1, r, col1Front, bCellW, bCellH, settings.marginLeft, settings.marginTop, settings.gutterHorizontal, settings.gutterVertical, false)
+                createCellFromEntry(sc * 2, r, col0Front, bCellW, bCellH, settings.marginLeft, settings.marginTop, settings.gutterHorizontal, settings.gutterVertical, false),
+                createCellFromEntry(sc * 2 + 1, r, col1Front, bCellW, bCellH, settings.marginLeft, settings.marginTop, settings.gutterHorizontal, settings.gutterVertical, false)
               );
             }
           }
@@ -750,26 +1119,24 @@ export function generateImpositionPlan(
           });
 
           if (settings.duplexMode !== 'simplex') {
-            let blPageIdx: number | null = sigStart + (2 * s + 1);
-            let brPageIdx: number | null = sigStart + (sigPaddedCount - 2 * s - 2);
-            if (blPageIdx >= sigStart + sigPageCount || blPageIdx >= totalPages) blPageIdx = null;
-            if (brPageIdx >= sigStart + sigPageCount || brPageIdx >= totalPages) brPageIdx = null;
+            const blEntry = at(2 * s + 1);
+            const brEntry = at(N - 2 * s - 2);
 
-            let col0Back = blPageIdx;
-            let col1Back = brPageIdx;
+            let col0Back = blEntry;
+            let col1Back = brEntry;
             if (settings.bindingEdge === 'right') {
-              col0Back = brPageIdx;
-              col1Back = blPageIdx;
+              col0Back = brEntry;
+              col1Back = blEntry;
             }
 
-            // Identical copies use the same natural booklet reverse; createCell
+            // Identical copies use the same natural booklet reverse; createCellFromEntry
             // converts both position and orientation for the selected turn axis.
             const backCells: ImpositionCell[] = [];
             for (let r = 0; r < rows; r++) {
               for (let sc = 0; sc < spreadCols; sc++) {
                 backCells.push(
-                  createCell(sc * 2, r, col0Back, bCellW, bCellH, backMarginLeft, backMarginTop, settings.gutterHorizontal, settings.gutterVertical, true),
-                  createCell(sc * 2 + 1, r, col1Back, bCellW, bCellH, backMarginLeft, backMarginTop, settings.gutterHorizontal, settings.gutterVertical, true)
+                  createCellFromEntry(sc * 2, r, col0Back, bCellW, bCellH, backMarginLeft, backMarginTop, settings.gutterHorizontal, settings.gutterVertical, true),
+                  createCellFromEntry(sc * 2 + 1, r, col1Back, bCellW, bCellH, backMarginLeft, backMarginTop, settings.gutterHorizontal, settings.gutterVertical, true)
                 );
               }
             }
@@ -796,58 +1163,53 @@ export function generateImpositionPlan(
     // Supports arbitrary signature sizes (including signatureSize < pagesPerSheet)
     // -------------------------------------------------------------------------
     interface BookletSpreadPages {
-      frontCol0: number | null;
-      frontCol1: number | null;
-      backCol0: number | null;
-      backCol1: number | null;
+      frontCol0: VirtualPage | null;
+      frontCol1: VirtualPage | null;
+      backCol0: VirtualPage | null;
+      backCol1: VirtualPage | null;
       sigIndex: number;
     }
 
-    const sigStep = settings.signatureSize > 0 ? settings.signatureSize : totalPages;
-    const totalSignatures = Math.ceil(totalPages / sigStep);
+    // Shared prepared signatures: content chunked per signatureSize (arbitrary
+    // sizes allowed) and padded per signature to a multiple of 4, pads before
+    // the back-cover block. No sigStart arithmetic over a padded list.
+    const prepared = prepareBookletSignatures(virtualPages, settings);
 
-    // Build all signatures and their spreads
-    const allSignatures: Array<{ sigIndex: number; spreads: BookletSpreadPages[] }> = [];
+    // Build all signatures and their spreads from local (already padded) lists.
+    const allSignatures: Array<{ sigIndex: number; pages: VirtualPage[]; spreads: BookletSpreadPages[] }> = [];
 
-    for (let sig = 0; sig < totalSignatures; sig++) {
-      const sigStart = sig * sigStep;
-      const sigPageCount = Math.min(sigStep, totalPages - sigStart);
-      const sigSpreads = Math.ceil(sigPageCount / 4);
-      const sigPaddedCount = sigSpreads * 4;
+    for (let sig = 0; sig < prepared.length; sig++) {
+      const pages = prepared[sig];
+      const sigSpreads = pages.length / 4;
 
       const spreads: BookletSpreadPages[] = [];
       for (let sp = 0; sp < sigSpreads; sp++) {
-        const fl = sigStart + (sigPaddedCount - 2 * sp - 1);
-        const fr = sigStart + (2 * sp);
-        const bl = sigStart + (2 * sp + 1);
-        const br = sigStart + (sigPaddedCount - 2 * sp - 2);
-
-        const safeP = (p: number) => (p < sigStart + sigPageCount && p < totalPages ? p : null);
-
-        const pFL = safeP(fl);
-        const pFR = safeP(fr);
-        const pBL = safeP(bl);
-        const pBR = safeP(br);
+        const eFL = pages[pages.length - 1 - 2 * sp] ?? null;
+        const eFR = pages[2 * sp] ?? null;
+        const eBL = pages[2 * sp + 1] ?? null;
+        const eBR = pages[pages.length - 2 - 2 * sp] ?? null;
 
         spreads.push({
-          frontCol0: settings.bindingEdge === 'right' ? pFR : pFL,
-          frontCol1: settings.bindingEdge === 'right' ? pFL : pFR,
-          backCol0: settings.bindingEdge === 'right' ? pBR : pBL,
-          backCol1: settings.bindingEdge === 'right' ? pBL : pBR,
+          frontCol0: settings.bindingEdge === 'right' ? eFR : eFL,
+          frontCol1: settings.bindingEdge === 'right' ? eFL : eFR,
+          backCol0: settings.bindingEdge === 'right' ? eBR : eBL,
+          backCol1: settings.bindingEdge === 'right' ? eBL : eBR,
           sigIndex: sig,
         });
       }
 
-      allSignatures.push({ sigIndex: sig, spreads });
+      allSignatures.push({ sigIndex: sig, pages, spreads });
     }
 
     const firstSigSpreads = allSignatures[0]?.spreads.length || 1;
+    const firstSigFinalPages = allSignatures[0]?.pages.length ?? settings.signatureSize;
 
     // Check if each signature has fewer spreads than fit on one physical sheet
     // e.g. signatureSize = 4 (1 spread), but 2x2 sheet holds 2 spreads (spreadsPerSheet = 2)
     if (firstSigSpreads < spreadsPerSheet && settings.signatureSize > 0) {
       // MULTIPLE SIGNATURES PER SHEET
       const sigsPerSheet = Math.max(1, Math.floor(spreadsPerSheet / firstSigSpreads));
+      const totalSignatures = allSignatures.length;
 
       for (let sigChunkStart = 0; sigChunkStart < totalSignatures; sigChunkStart += sigsPerSheet) {
         const frontCells: ImpositionCell[] = [];
@@ -870,13 +1232,13 @@ export function generateImpositionPlan(
             const spread = sigObj && sp < sigObj.spreads.length ? sigObj.spreads[sp] : null;
 
             frontCells.push(
-              createCell(sc * 2, r, spread?.frontCol0 ?? null, bCellW, bCellH, settings.marginLeft, settings.marginTop, settings.gutterHorizontal, settings.gutterVertical, false),
-              createCell(sc * 2 + 1, r, spread?.frontCol1 ?? null, bCellW, bCellH, settings.marginLeft, settings.marginTop, settings.gutterHorizontal, settings.gutterVertical, false)
+              createCellFromEntry(sc * 2, r, spread?.frontCol0 ?? null, bCellW, bCellH, settings.marginLeft, settings.marginTop, settings.gutterHorizontal, settings.gutterVertical, false),
+              createCellFromEntry(sc * 2 + 1, r, spread?.frontCol1 ?? null, bCellW, bCellH, settings.marginLeft, settings.marginTop, settings.gutterHorizontal, settings.gutterVertical, false)
             );
 
             backCells.push(
-              createCell(backSc * 2, r, spread?.backCol0 ?? null, bCellW, bCellH, backMarginLeft, backMarginTop, settings.gutterHorizontal, settings.gutterVertical, true),
-              createCell(backSc * 2 + 1, r, spread?.backCol1 ?? null, bCellW, bCellH, backMarginLeft, backMarginTop, settings.gutterHorizontal, settings.gutterVertical, true)
+              createCellFromEntry(backSc * 2, r, spread?.backCol0 ?? null, bCellW, bCellH, backMarginLeft, backMarginTop, settings.gutterHorizontal, settings.gutterVertical, true),
+              createCellFromEntry(backSc * 2 + 1, r, spread?.backCol1 ?? null, bCellW, bCellH, backMarginLeft, backMarginTop, settings.gutterHorizontal, settings.gutterVertical, true)
             );
           }
         }
@@ -887,7 +1249,7 @@ export function generateImpositionPlan(
           sheetNumber: globalSheetNumber,
           side: 'front',
           label: isMultiSpread
-            ? `${L.sheet} ${globalSheetNumber} · ${L.front} (${fill(L.signaturesOf, { n: sigsPerSheet, m: sigStep })})`
+            ? `${L.sheet} ${globalSheetNumber} · ${L.front} (${fill(L.signaturesOf, { n: sigsPerSheet, m: firstSigFinalPages })})`
             : `${L.sheet} ${globalSheetNumber} · ${L.front} (${L.pressFront})`,
           cells: frontCells,
         });
@@ -898,7 +1260,7 @@ export function generateImpositionPlan(
             sheetNumber: globalSheetNumber,
             side: 'back',
             label: isMultiSpread
-              ? `${L.sheet} ${globalSheetNumber} · ${L.back} (${fill(L.signaturesOf, { n: sigsPerSheet, m: sigStep })})`
+              ? `${L.sheet} ${globalSheetNumber} · ${L.back} (${fill(L.signaturesOf, { n: sigsPerSheet, m: firstSigFinalPages })})`
               : `${L.sheet} ${globalSheetNumber} · ${L.back} (${L.pressBack})`,
             cells: backCells,
           });
@@ -926,23 +1288,25 @@ export function generateImpositionPlan(
             const spread = spreadIdx < sigSpreads ? sigObj.spreads[spreadIdx] : null;
 
             frontCells.push(
-              createCell(sc * 2, r, spread?.frontCol0 ?? null, bCellW, bCellH, settings.marginLeft, settings.marginTop, settings.gutterHorizontal, settings.gutterVertical, false),
-              createCell(sc * 2 + 1, r, spread?.frontCol1 ?? null, bCellW, bCellH, settings.marginLeft, settings.marginTop, settings.gutterHorizontal, settings.gutterVertical, false)
+              createCellFromEntry(sc * 2, r, spread?.frontCol0 ?? null, bCellW, bCellH, settings.marginLeft, settings.marginTop, settings.gutterHorizontal, settings.gutterVertical, false),
+              createCellFromEntry(sc * 2 + 1, r, spread?.frontCol1 ?? null, bCellW, bCellH, settings.marginLeft, settings.marginTop, settings.gutterHorizontal, settings.gutterVertical, false)
             );
 
             backCells.push(
-              createCell(backSc * 2, r, spread?.backCol0 ?? null, bCellW, bCellH, backMarginLeft, backMarginTop, settings.gutterHorizontal, settings.gutterVertical, true),
-              createCell(backSc * 2 + 1, r, spread?.backCol1 ?? null, bCellW, bCellH, backMarginLeft, backMarginTop, settings.gutterHorizontal, settings.gutterVertical, true)
+              createCellFromEntry(backSc * 2, r, spread?.backCol0 ?? null, bCellW, bCellH, backMarginLeft, backMarginTop, settings.gutterHorizontal, settings.gutterVertical, true),
+              createCellFromEntry(backSc * 2 + 1, r, spread?.backCol1 ?? null, bCellW, bCellH, backMarginLeft, backMarginTop, settings.gutterHorizontal, settings.gutterVertical, true)
             );
           }
 
           const isMultiSpread = spreadsPerSheet > 1;
+          // Label counts signature pages (spreads x 4), not face slots.
+          const sigPages = sigObj.spreads.length * 4;
           sheets.push({
             sheetIndex: sheets.length,
             sheetNumber: globalSheetNumber,
             side: 'front',
             label: isMultiSpread
-              ? `${L.sheet} ${globalSheetNumber} · ${L.front} (${fill(L.bookletCutNest, { n: cols * rows })})`
+              ? `${L.sheet} ${globalSheetNumber} · ${L.front} (${fill(L.bookletCutNest, { n: sigPages })})`
               : `${L.sheet} ${globalSheetNumber} · ${L.front} (${L.pressFront})`,
             cells: frontCells,
           });
@@ -953,7 +1317,7 @@ export function generateImpositionPlan(
               sheetNumber: globalSheetNumber,
               side: 'back',
               label: isMultiSpread
-                ? `${L.sheet} ${globalSheetNumber} · ${L.back} (${fill(L.bookletCutNest, { n: cols * rows })})`
+                ? `${L.sheet} ${globalSheetNumber} · ${L.back} (${fill(L.bookletCutNest, { n: sigPages })})`
                 : `${L.sheet} ${globalSheetNumber} · ${L.back} (${L.pressBack})`,
               cells: backCells,
             });
@@ -970,12 +1334,14 @@ export function generateImpositionPlan(
   // -------------------------------------------------------------
   // GENERAL GRID DIMENSIONS FOR MODES 2, 3, 4, 5
   // -------------------------------------------------------------
+  // Validated above: cols/rows are finite integers >= 1 and the usable area is
+  // strictly positive, so no clamping that would hide impossible geometry.
   const cols = settings.gridCols;
   const rows = settings.gridRows;
   const slotsPerSheet = cols * rows;
 
-  const availW = Math.max(1, sheetW - settings.marginLeft - settings.marginRight - (cols - 1) * settings.gutterHorizontal);
-  const availH = Math.max(1, sheetH - settings.marginTop - settings.marginBottom - (rows - 1) * settings.gutterVertical);
+  const availW = sheetW - settings.marginLeft - settings.marginRight - (cols - 1) * settings.gutterHorizontal;
+  const availH = sheetH - settings.marginTop - settings.marginBottom - (rows - 1) * settings.gutterVertical;
   const cellW = availW / cols;
   const cellH = availH / rows;
 
