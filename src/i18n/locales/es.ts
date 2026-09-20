@@ -31,6 +31,7 @@ export const es: Translations = {
     heroTitle: 'Imposición de Páginas Profesional',
     heroDescription:
       'Carga un archivo PDF original para imponerlo automáticamente en pliegos de impresión más grandes. Configura grillas, rotaciones de página y marcas de corte para imprentas industriales y encuadernación.',
+    dropTitle: 'Arrastra y suelta tu PDF aquí',
     analyzingPdf: 'Analizando documento PDF...',
     analyzingPdfSubtitle: 'Extrayendo páginas y calculando pliegos',
     dragDropSubtitle: 'Soporta cualquier tamaño de página original',

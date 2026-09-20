@@ -32,6 +32,7 @@ export const en: Translations = {
     heroDescription:
       'Load an original PDF document to automatically impose it onto larger press sheets. Configure grids, page rotations, and crop marks for commercial printing and bookbinding.',
     analyzingPdf: 'Analyzing PDF document...',
+    dropTitle: 'Drag & drop your PDF here',
     analyzingPdfSubtitle: 'Extracting pages and calculating imposition plan',
     dragDropSubtitle: 'Supports any original page size',
     browseInPc: 'browse your computer',

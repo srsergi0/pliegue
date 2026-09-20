@@ -182,8 +182,6 @@ export default function App() {
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
             onOpenFile={handleOpenAnotherFile}
-            onApplyTemplate={handleApplyTemplate}
-            onOpenTemplates={() => setIsTemplatesOpen(true)}
             onLoadSample={handleLoadSamplePDF}
           />
         ) : (

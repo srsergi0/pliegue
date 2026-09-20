@@ -32,6 +32,7 @@ export const ja: Translations = {
     heroDescription:
       '元のPDFファイルを読み込み、大判の印刷用紙へ自動で面付け（レイアウト）します。グリッド配置、ページの回転、トンボ（トリムマーク）の付加など、商業印刷や製本に最適な処理をローカル環境で高速に実行します。',
     analyzingPdf: 'PDFドキュメントを解析中...',
+    dropTitle: 'ここにPDFをドラッグ＆ドロップ',
     analyzingPdfSubtitle: 'ページを抽出し面付けプランを計算しています',
     dragDropSubtitle: 'あらゆるオリジナルページサイズに対応',
     browseInPc: 'PCから参照する',

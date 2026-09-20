@@ -32,6 +32,7 @@ export const zh: Translations = {
     heroDescription:
       '导入原始PDF文档，自动将其拼版至大规格印刷纸张上。灵活配置网格阵列、页面旋转角度、出血位及矢量裁切角线，为工业印刷与装订提供毫秒级本地高速处理。',
     analyzingPdf: '正在解析PDF文档...',
+    dropTitle: '将 PDF 拖放到此处',
     analyzingPdfSubtitle: '正在提取页面并计算拼版方案',
     dragDropSubtitle: '支持任意原始页面规格尺寸',
     browseInPc: '浏览本地文件',

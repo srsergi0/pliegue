@@ -30,6 +30,7 @@ export interface Translations {
   welcome: {
     heroTitle: string;
     heroDescription: string;
+    dropTitle: string;
     analyzingPdf: string;
     analyzingPdfSubtitle: string;
     dragDropSubtitle: string;

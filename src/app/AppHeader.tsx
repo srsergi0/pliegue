@@ -85,15 +85,17 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
       {/* Action Buttons */}
       <div className="flex items-center gap-2.5 shrink-0">
         {!hasPdf && <LanguageSelector />}
-        <Button
-          variant="amber"
-          onClick={onOpenTemplates}
-          title={t.actions.templatesTooltip}
-          id="btn-open-templates"
-        >
-          <Sparkles className="w-3.5 h-3.5 text-amber-600" />
-          <span>{t.actions.templates}</span>
-        </Button>
+        {hasPdf && (
+          <Button
+            variant="amber"
+            onClick={onOpenTemplates}
+            title={t.actions.templatesTooltip}
+            id="btn-open-templates"
+          >
+            <Sparkles className="w-3.5 h-3.5 text-amber-600" />
+            <span>{t.actions.templates}</span>
+          </Button>
+        )}
 
         {hasPdf && (
           <Button

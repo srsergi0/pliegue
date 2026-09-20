@@ -76,17 +76,42 @@ export const I18nProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     return detectSystemLanguage();
   });
 
-  // Query native Electron system locale if available
+  // Query the native Electron system language if available. The user's saved
+  // preference always wins; only on a fresh install (no saved value) do we
+  // follow the OS: first the preferred-languages list, then the single locale.
   useEffect(() => {
-    if (typeof window !== 'undefined' && window.electronAPI?.getSystemLocale) {
-      window.electronAPI.getSystemLocale().then((electronLocale) => {
-        const matched = normalizeToSupportedLanguage(electronLocale);
-        const hasSaved = localStorage.getItem(STORAGE_KEY);
-        if (matched && !hasSaved) {
-          setLanguageState(matched);
+    const api = window.electronAPI;
+    if (typeof window === 'undefined' || !api) return;
+
+    // Explicit user preference: never override it.
+    if (localStorage.getItem(STORAGE_KEY)) return;
+
+    let active = true;
+    (async () => {
+      try {
+        if (api.getPreferredLanguages) {
+          const preferred = await api.getPreferredLanguages();
+          for (const locale of preferred || []) {
+            const matched = normalizeToSupportedLanguage(locale);
+            if (matched) {
+              if (active) setLanguageState(matched);
+              return;
+            }
+          }
         }
-      }).catch(() => {});
-    }
+        if (api.getSystemLocale) {
+          const locale = await api.getSystemLocale();
+          const matched = normalizeToSupportedLanguage(locale);
+          if (matched && active) setLanguageState(matched);
+        }
+      } catch {
+        // Ignore: browser detection already provided a fallback.
+      }
+    })();
+
+    return () => {
+      active = false;
+    };
   }, []);
 
   const setLanguage = (lang: Language) => {
