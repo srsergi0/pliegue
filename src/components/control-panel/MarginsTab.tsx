@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { ImpositionSettings } from '../../types';
 import { Crop, Link2, Unlink2, Scissors, LayoutDashboard } from 'lucide-react';
 import { useI18n } from '../../i18n/I18nContext';
+import { Button, Input, Checkbox } from '../ui';
 
 interface MarginsTabProps {
   settings: ImpositionSettings;
@@ -76,14 +77,14 @@ export const MarginsTab: React.FC<MarginsTabProps> = ({
           {/* Presets rápidos */}
           <div className="flex items-center gap-1">
             {[0, 5, 10].map((presetMm) => (
-              <button
+              <Button
                 key={presetMm}
-                type="button"
+                variant="chip"
+                size="xs"
                 onClick={() => applyMarginPreset(presetMm)}
-                className="text-[10px] font-semibold text-neutral-700 px-2 py-0.5 rounded bg-white hover:bg-neutral-100 border border-neutral-200 cursor-pointer transition-colors shadow-2xs"
               >
                 {presetMm}mm
-              </button>
+              </Button>
             ))}
           </div>
         </div>
@@ -93,27 +94,27 @@ export const MarginsTab: React.FC<MarginsTabProps> = ({
           <span className="text-[11px] font-medium text-neutral-600">
             {t.margins.independentAdjustments}
           </span>
-          <button
-            type="button"
-            onClick={() => setMarginsLinked(!marginsLinked)}
-            className={`flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded transition-all cursor-pointer border ${
-              marginsLinked
-                ? 'bg-neutral-900 text-white border-neutral-900'
-                : 'bg-white text-neutral-600 border-neutral-300 hover:bg-neutral-100'
-            }`}
-          >
-            {marginsLinked ? (
-              <>
-                <Link2 className="w-3 h-3" />
-                <span>{t.margins.linked}</span>
-              </>
-            ) : (
-              <>
-                <Unlink2 className="w-3 h-3" />
-                <span>{t.margins.unlinked}</span>
-              </>
-            )}
-          </button>
+          {marginsLinked ? (
+            <Button
+              variant="chip"
+              size="xs"
+              className="bg-neutral-900 text-white border-neutral-900 hover:bg-neutral-900"
+              onClick={() => setMarginsLinked(false)}
+            >
+              <Link2 className="w-3 h-3" />
+              <span>{t.margins.linked}</span>
+            </Button>
+          ) : (
+            <Button
+              variant="chip"
+              size="xs"
+              className="bg-white text-neutral-600 border-neutral-300"
+              onClick={() => setMarginsLinked(true)}
+            >
+              <Unlink2 className="w-3 h-3" />
+              <span>{t.margins.unlinked}</span>
+            </Button>
+          )}
         </div>
 
         {/* Grid 2x2 para Arriba, Abajo, Izq, Der (amplio y sin solapamiento de flechas) */}
@@ -122,12 +123,12 @@ export const MarginsTab: React.FC<MarginsTabProps> = ({
           <div className="flex items-center justify-between bg-white border border-neutral-200/90 rounded-lg px-2.5 py-1.5 shadow-2xs">
             <span className="text-[11px] font-medium text-neutral-500">{t.margins.top}</span>
             <div className="flex items-center gap-1">
-              <input
+              <Input
+                variant="inline"
                 type="number"
                 min={0}
                 value={settings.marginTop}
                 onChange={(e) => handleMarginChange('marginTop', Number(e.target.value))}
-                className="w-12 text-right text-xs font-mono font-bold text-neutral-800 bg-transparent focus:outline-hidden"
                 id="margin-top"
               />
               <span className="text-[10px] text-neutral-400 font-mono">mm</span>
@@ -138,12 +139,12 @@ export const MarginsTab: React.FC<MarginsTabProps> = ({
           <div className="flex items-center justify-between bg-white border border-neutral-200/90 rounded-lg px-2.5 py-1.5 shadow-2xs">
             <span className="text-[11px] font-medium text-neutral-500">{t.margins.bottom}</span>
             <div className="flex items-center gap-1">
-              <input
+              <Input
+                variant="inline"
                 type="number"
                 min={0}
                 value={settings.marginBottom}
                 onChange={(e) => handleMarginChange('marginBottom', Number(e.target.value))}
-                className="w-12 text-right text-xs font-mono font-bold text-neutral-800 bg-transparent focus:outline-hidden"
                 id="margin-bottom"
               />
               <span className="text-[10px] text-neutral-400 font-mono">mm</span>
@@ -154,12 +155,12 @@ export const MarginsTab: React.FC<MarginsTabProps> = ({
           <div className="flex items-center justify-between bg-white border border-neutral-200/90 rounded-lg px-2.5 py-1.5 shadow-2xs">
             <span className="text-[11px] font-medium text-neutral-500">{t.margins.left}</span>
             <div className="flex items-center gap-1">
-              <input
+              <Input
+                variant="inline"
                 type="number"
                 min={0}
                 value={settings.marginLeft}
                 onChange={(e) => handleMarginChange('marginLeft', Number(e.target.value))}
-                className="w-12 text-right text-xs font-mono font-bold text-neutral-800 bg-transparent focus:outline-hidden"
                 id="margin-left"
               />
               <span className="text-[10px] text-neutral-400 font-mono">mm</span>
@@ -170,12 +171,12 @@ export const MarginsTab: React.FC<MarginsTabProps> = ({
           <div className="flex items-center justify-between bg-white border border-neutral-200/90 rounded-lg px-2.5 py-1.5 shadow-2xs">
             <span className="text-[11px] font-medium text-neutral-500">{t.margins.right}</span>
             <div className="flex items-center gap-1">
-              <input
+              <Input
+                variant="inline"
                 type="number"
                 min={0}
                 value={settings.marginRight}
                 onChange={(e) => handleMarginChange('marginRight', Number(e.target.value))}
-                className="w-12 text-right text-xs font-mono font-bold text-neutral-800 bg-transparent focus:outline-hidden"
                 id="margin-right"
               />
               <span className="text-[10px] text-neutral-400 font-mono">mm</span>
@@ -196,14 +197,14 @@ export const MarginsTab: React.FC<MarginsTabProps> = ({
 
           <div className="flex items-center gap-1">
             {[0, 3, 6].map((gutterMm) => (
-              <button
+              <Button
                 key={gutterMm}
-                type="button"
+                variant="chip"
+                size="xs"
                 onClick={() => applyGutterPreset(gutterMm)}
-                className="text-[10px] font-semibold text-neutral-700 px-2 py-0.5 rounded bg-white hover:bg-neutral-100 border border-neutral-200 cursor-pointer transition-colors shadow-2xs"
               >
                 {gutterMm}mm
-              </button>
+              </Button>
             ))}
           </div>
         </div>
@@ -213,12 +214,12 @@ export const MarginsTab: React.FC<MarginsTabProps> = ({
           <div className="flex items-center justify-between bg-white border border-neutral-200/90 rounded-lg px-2.5 py-1.5 shadow-2xs">
             <span className="text-[11px] font-medium text-neutral-500">{t.margins.horizontalGutter}</span>
             <div className="flex items-center gap-1">
-              <input
+              <Input
+                variant="inline"
                 type="number"
                 min={0}
                 value={settings.gutterHorizontal}
                 onChange={(e) => updateSetting('gutterHorizontal', Math.max(0, Number(e.target.value)))}
-                className="w-12 text-right text-xs font-mono font-bold text-neutral-800 bg-transparent focus:outline-hidden"
                 id="gutter-horizontal"
               />
               <span className="text-[10px] text-neutral-400 font-mono">mm</span>
@@ -229,12 +230,12 @@ export const MarginsTab: React.FC<MarginsTabProps> = ({
           <div className="flex items-center justify-between bg-white border border-neutral-200/90 rounded-lg px-2.5 py-1.5 shadow-2xs">
             <span className="text-[11px] font-medium text-neutral-500">{t.margins.verticalGutter}</span>
             <div className="flex items-center gap-1">
-              <input
+              <Input
+                variant="inline"
                 type="number"
                 min={0}
                 value={settings.gutterVertical}
                 onChange={(e) => updateSetting('gutterVertical', Math.max(0, Number(e.target.value)))}
-                className="w-12 text-right text-xs font-mono font-bold text-neutral-800 bg-transparent focus:outline-hidden"
                 id="gutter-vertical"
               />
               <span className="text-[10px] text-neutral-400 font-mono">mm</span>
@@ -253,11 +254,9 @@ export const MarginsTab: React.FC<MarginsTabProps> = ({
         </div>
 
         <label className="flex items-center gap-2.5 p-2 bg-white rounded-lg border border-neutral-200/80 cursor-pointer select-none">
-          <input
-            type="checkbox"
+          <Checkbox
             checked={settings.drawCropMarks}
             onChange={(e) => updateSetting('drawCropMarks', e.target.checked)}
-            className="w-4 h-4 accent-neutral-900 rounded border-neutral-300 cursor-pointer"
             id="checkbox-crop-marks"
           />
           <div className="flex flex-col">
@@ -274,24 +273,24 @@ export const MarginsTab: React.FC<MarginsTabProps> = ({
           <div className="grid grid-cols-2 gap-2 p-2 bg-white rounded-lg border border-neutral-200">
             <div className="flex flex-col gap-1">
               <label className="text-[10px] text-neutral-500 font-mono">{t.margins.bleed}</label>
-              <input
+              <Input
                 type="number"
                 min={0}
                 step={0.5}
                 value={settings.bleed}
                 onChange={(e) => updateSetting('bleed', Math.max(0, Number(e.target.value)))}
-                className="w-full bg-neutral-50 border border-neutral-200 rounded-md px-2 py-1 text-xs text-neutral-800 font-bold"
+                className="font-bold"
                 id="bleed"
               />
             </div>
             <div className="flex flex-col gap-1">
               <label className="text-[10px] text-neutral-500 font-mono">{t.margins.markLength}</label>
-              <input
+              <Input
                 type="number"
                 min={1}
                 value={settings.cropMarkLength}
                 onChange={(e) => updateSetting('cropMarkLength', Math.max(1, Number(e.target.value)))}
-                className="w-full bg-neutral-50 border border-neutral-200 rounded-md px-2 py-1 text-xs text-neutral-800 font-bold"
+                className="font-bold"
                 id="crop-mark-length"
               />
             </div>

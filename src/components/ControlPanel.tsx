@@ -7,6 +7,7 @@ import { TabNavigation, TabType } from './control-panel/TabNavigation';
 import { LayoutTab } from './control-panel/LayoutTab';
 import { AdjustmentsTab } from './control-panel/AdjustmentsTab';
 import { MarginsTab } from './control-panel/MarginsTab';
+import { Button, IconButton } from './ui';
 
 interface ControlPanelProps {
   settings: ImpositionSettings;
@@ -47,26 +48,26 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
             </div>
             <div className="flex items-center gap-1 shrink-0">
               {onOpenNewFile && (
-                <button
-                  type="button"
+                <Button
+                  variant="outline"
+                  size="sm"
                   onClick={onOpenNewFile}
-                  className="flex items-center gap-1 text-[11px] font-semibold text-neutral-700 hover:text-neutral-900 bg-white hover:bg-neutral-100 border border-neutral-200 px-2.5 py-1 rounded-md transition-all shadow-2xs cursor-pointer"
+                  className="text-[11px]"
                   title={t.actions.openAnotherTooltip}
                   id="btn-change-pdf"
                 >
                   <FolderOpen className="w-3.5 h-3.5 text-neutral-500" />
                   <span>{t.actions.openAnother}</span>
-                </button>
+                </Button>
               )}
-              <button
-                type="button"
+              <IconButton
+                tone="danger"
                 onClick={onRemoveFile}
-                className="text-neutral-400 hover:text-red-600 transition-colors p-1.5 rounded-md hover:bg-red-50 cursor-pointer"
                 title={t.actions.closeNotification}
                 id="btn-remove-file"
               >
                 <X className="w-4 h-4" />
-              </button>
+              </IconButton>
             </div>
           </div>
         </div>

@@ -19,6 +19,7 @@ import {
 } from '../../utils/imposition';
 import { Scissors, Layers, Columns, BookOpen, Compass, Sparkles, FileText } from 'lucide-react';
 import { useI18n } from '../../i18n/I18nContext';
+import { Select, Input, Checkbox, SegmentedButton } from '../ui';
 
 interface LayoutTabProps {
   settings: ImpositionSettings;
@@ -172,10 +173,9 @@ export const LayoutTab: React.FC<LayoutTabProps> = ({
         {/* Tamaño del papel */}
         <div className="flex flex-col gap-1">
           <label className="text-[11px] font-medium text-neutral-600">{t.layout.sheetFormat}</label>
-          <select
+          <Select
             value={settings.sheetPreset}
             onChange={handleSheetPresetChange}
-            className="w-full bg-white border border-neutral-300 rounded-lg px-2.5 py-1.5 text-xs text-neutral-800 font-medium focus:ring-1 focus:ring-neutral-400 focus:outline-hidden"
             id="sheet-preset"
           >
             {SHEET_PRESETS.map((p) => (
@@ -184,37 +184,29 @@ export const LayoutTab: React.FC<LayoutTabProps> = ({
               </option>
             ))}
             <option value="Custom">{t.layout.customSheetOption}</option>
-          </select>
+          </Select>
         </div>
 
         {/* Orientación con botones claros */}
         <div className="flex flex-col gap-1">
           <label className="text-[11px] font-medium text-neutral-600">{t.layout.sheetOrientationLabel}</label>
           <div className="grid grid-cols-2 gap-1.5 bg-neutral-200/60 p-1 rounded-lg">
-            <button
-              type="button"
+            <SegmentedButton
+              active={settings.sheetOrientation === 'landscape'}
+              size="wide"
               onClick={() => updateSetting('sheetOrientation', 'landscape')}
-              className={`text-xs py-1.5 px-2 rounded-md font-semibold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
-                settings.sheetOrientation === 'landscape'
-                  ? 'bg-neutral-900 text-white shadow-xs'
-                  : 'text-neutral-600 hover:text-neutral-900 hover:bg-white/60'
-              }`}
             >
               <span>{t.layout.landscape}</span>
               <span className="text-[10px] opacity-70">▭</span>
-            </button>
-            <button
-              type="button"
+            </SegmentedButton>
+            <SegmentedButton
+              active={settings.sheetOrientation === 'portrait'}
+              size="wide"
               onClick={() => updateSetting('sheetOrientation', 'portrait')}
-              className={`text-xs py-1.5 px-2 rounded-md font-semibold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
-                settings.sheetOrientation === 'portrait'
-                  ? 'bg-neutral-900 text-white shadow-xs'
-                  : 'text-neutral-600 hover:text-neutral-900 hover:bg-white/60'
-              }`}
             >
               <span>{t.layout.portrait}</span>
               <span className="text-[10px] opacity-70">▯</span>
-            </button>
+            </SegmentedButton>
           </div>
         </div>
 
@@ -223,21 +215,19 @@ export const LayoutTab: React.FC<LayoutTabProps> = ({
           <div className="grid grid-cols-2 gap-2 p-2.5 bg-white rounded-lg border border-neutral-200">
             <div className="flex flex-col gap-1">
               <label className="text-[10px] text-neutral-500 font-mono">{t.layout.sheetWidthCustom}</label>
-              <input
+              <Input
                 type="number"
                 value={settings.sheetWidth}
                 onChange={(e) => updateSetting('sheetWidth', Math.max(10, Number(e.target.value)))}
-                className="w-full bg-neutral-50 border border-neutral-200 rounded-md px-2 py-1 text-xs text-neutral-800"
                 id="sheet-custom-width"
               />
             </div>
             <div className="flex flex-col gap-1">
               <label className="text-[10px] text-neutral-500 font-mono">{t.layout.sheetHeightCustom}</label>
-              <input
+              <Input
                 type="number"
                 value={settings.sheetHeight}
                 onChange={(e) => updateSetting('sheetHeight', Math.max(10, Number(e.target.value)))}
-                className="w-full bg-neutral-50 border border-neutral-200 rounded-md px-2 py-1 text-xs text-neutral-800"
                 id="sheet-custom-height"
               />
             </div>
@@ -256,7 +246,7 @@ export const LayoutTab: React.FC<LayoutTabProps> = ({
 
         <div className="flex flex-col gap-1">
           <label className="text-[11px] font-medium text-neutral-600">{t.layout.impositionMode}</label>
-          <select
+          <Select
             value={settings.layoutMode}
             onChange={(e) => {
               const val = e.target.value as LayoutMode;
@@ -271,7 +261,6 @@ export const LayoutTab: React.FC<LayoutTabProps> = ({
                 updateSetting('layoutMode', val);
               }
             }}
-            className="w-full bg-white border border-neutral-300 rounded-lg px-2.5 py-1.5 text-xs text-neutral-800 font-medium focus:outline-hidden focus:ring-1 focus:ring-neutral-400"
             id="layout-mode"
           >
             <option value="booklet">{t.layout.modeBooklet}</option>
@@ -279,7 +268,7 @@ export const LayoutTab: React.FC<LayoutTabProps> = ({
             <option value="cut_and_stack">{t.layout.modeCutStack}</option>
             <option value="sequential">{t.layout.modeSequential}</option>
             <option value="step_and_repeat">{t.layout.modeRepeat}</option>
-          </select>
+          </Select>
         </div>
 
         {/* --- OPCIONES PARA BOOKLET --- */}
@@ -344,10 +333,10 @@ export const LayoutTab: React.FC<LayoutTabProps> = ({
                     {t.layout.cutAndNestTitle.replace('{count}', String(settings.gridCols * settings.gridRows))}
                   </label>
                 </div>
-                <select
+                <Select
+                  variant="amber"
                   value={settings.booklet4UpMode || 'cut_and_nest'}
                   onChange={(e) => updateSetting('booklet4UpMode', e.target.value as Booklet4UpMode)}
-                  className="bg-white border border-amber-300 rounded-md px-2 py-1 text-xs text-neutral-800 font-medium focus:outline-hidden"
                   id="booklet-4up-mode"
                 >
                   <option value="cut_and_nest">{t.layout.modeContinuous}</option>
@@ -355,7 +344,7 @@ export const LayoutTab: React.FC<LayoutTabProps> = ({
                   {settings.gridCols === 2 && settings.gridRows === 2 && (
                     <option value="french_fold">{t.layout.modeFrenchFold}</option>
                   )}
-                </select>
+                </Select>
               </div>
             )}
 
@@ -363,23 +352,23 @@ export const LayoutTab: React.FC<LayoutTabProps> = ({
             <div className="grid grid-cols-2 gap-2 p-2 bg-white rounded-lg border border-neutral-200/80">
               <div className="flex flex-col gap-1">
                 <label className="text-[10px] text-neutral-500 font-medium">{t.layout.spineBinding}</label>
-                <select
+                <Select
+                  variant="subtle"
                   value={settings.bindingEdge}
                   onChange={(e) => updateSetting('bindingEdge', e.target.value as BindingEdge)}
-                  className="bg-neutral-50 border border-neutral-200 rounded-md px-2 py-1 text-xs text-neutral-800 focus:outline-hidden font-medium"
                   id="binding-edge"
                 >
                   <option value="left">{t.layout.bindingLeftOcc}</option>
                   <option value="right">{t.layout.bindingRightOri}</option>
-                </select>
+                </Select>
               </div>
 
               <div className="flex flex-col gap-1">
                 <label className="text-[10px] text-neutral-500 font-medium">{t.layout.signatureSizeLabel}</label>
-                <select
+                <Select
+                  variant="subtle"
                   value={settings.signatureSize}
                   onChange={(e) => updateSetting('signatureSize', Number(e.target.value))}
-                  className="bg-neutral-50 border border-neutral-200 rounded-md px-2 py-1 text-xs text-neutral-800 focus:outline-hidden font-medium"
                   id="signature-size"
                 >
                   <option value={0}>{t.layout.allPagesInOne}</option>
@@ -395,7 +384,7 @@ export const LayoutTab: React.FC<LayoutTabProps> = ({
                         {opt.label}
                       </option>
                     ))}
-                </select>
+                </Select>
               </div>
             </div>
 
@@ -413,12 +402,12 @@ export const LayoutTab: React.FC<LayoutTabProps> = ({
                     </p>
                   </div>
                 </div>
-                <input
-                  type="checkbox"
+                <Checkbox
+                  variant="plain"
                   id="split-double-spreads"
                   checked={settings.splitDoubleSpreads || false}
                   onChange={(e) => updateSetting('splitDoubleSpreads', e.target.checked)}
-                  className="w-4 h-4 text-neutral-900 rounded border-neutral-300 focus:ring-neutral-400 cursor-pointer mt-0.5 shrink-0"
+                  className="mt-0.5 shrink-0"
                 />
               </div>
 
@@ -458,10 +447,9 @@ export const LayoutTab: React.FC<LayoutTabProps> = ({
                   </span>
                 )}
               </div>
-              <select
+              <Select
                 value={settings.targetPagePreset}
                 onChange={(e) => handleTargetPresetChange(e.target.value as TargetPagePreset)}
-                className="w-full bg-white border border-neutral-300 rounded-lg px-2.5 py-1.5 text-xs text-neutral-800 font-medium focus:ring-1 focus:ring-neutral-400 focus:outline-hidden"
                 id="target-page-preset"
               >
                 {TARGET_PAGE_PRESETS.map((p) => (
@@ -469,7 +457,7 @@ export const LayoutTab: React.FC<LayoutTabProps> = ({
                     {targetPresetLabel(p.name, p.label)}
                   </option>
                 ))}
-              </select>
+              </Select>
             </div>
 
             {/* Medidas personalizadas de corte */}
@@ -477,21 +465,19 @@ export const LayoutTab: React.FC<LayoutTabProps> = ({
               <div className="grid grid-cols-2 gap-2 p-2 bg-white rounded-lg border border-neutral-200">
                 <div className="flex flex-col gap-1">
                   <label className="text-[10px] text-neutral-500 font-mono">{t.layout.cutWidth}</label>
-                  <input
+                  <Input
                     type="number"
                     value={settings.targetPageWidth}
                     onChange={(e) => updateSetting('targetPageWidth', Math.max(10, Number(e.target.value)))}
-                    className="w-full bg-neutral-50 border border-neutral-200 rounded-md px-2 py-1 text-xs text-neutral-800"
                     id="target-custom-width"
                   />
                 </div>
                 <div className="flex flex-col gap-1">
                   <label className="text-[10px] text-neutral-500 font-mono">{t.layout.cutHeight}</label>
-                  <input
+                  <Input
                     type="number"
                     value={settings.targetPageHeight}
                     onChange={(e) => updateSetting('targetPageHeight', Math.max(10, Number(e.target.value)))}
-                    className="w-full bg-neutral-50 border border-neutral-200 rounded-md px-2 py-1 text-xs text-neutral-800"
                     id="target-custom-height"
                   />
                 </div>
@@ -502,26 +488,26 @@ export const LayoutTab: React.FC<LayoutTabProps> = ({
             <div className="grid grid-cols-2 gap-2.5">
               <div className="flex flex-col gap-1">
                 <label className="text-[11px] font-medium text-neutral-600">{t.layout.columns}</label>
-                <input
+                <Input
+                  variant="outline"
                   type="number"
                   min={1}
                   max={16}
                   value={settings.gridCols}
                   onChange={(e) => updateSetting('gridCols', Math.max(1, Math.min(16, Number(e.target.value))))}
-                  className="w-full bg-white border border-neutral-200 rounded-lg px-2.5 py-1.5 text-xs text-neutral-800 font-mono font-bold focus:outline-hidden"
                   id="grid-cols"
                 />
               </div>
 
               <div className="flex flex-col gap-1">
                 <label className="text-[11px] font-medium text-neutral-600">{t.layout.rows}</label>
-                <input
+                <Input
+                  variant="outline"
                   type="number"
                   min={1}
                   max={16}
                   value={settings.gridRows}
                   onChange={(e) => updateSetting('gridRows', Math.max(1, Math.min(16, Number(e.target.value))))}
-                  className="w-full bg-white border border-neutral-200 rounded-lg px-2.5 py-1.5 text-xs text-neutral-800 font-mono font-bold focus:outline-hidden"
                   id="grid-rows"
                 />
               </div>
@@ -532,28 +518,28 @@ export const LayoutTab: React.FC<LayoutTabProps> = ({
               <div className="grid grid-cols-2 gap-2 p-2.5 bg-white rounded-lg border border-neutral-200">
                 <div className="flex flex-col gap-1">
                   <label className="text-[10px] text-neutral-500 font-medium">{t.layout.duplexDistribution}</label>
-                  <select
+                  <Select
+                    variant="subtle"
                     value={settings.duplexItemMode}
                     onChange={(e) => updateSetting('duplexItemMode', e.target.value as DuplexItemMode)}
-                    className="bg-neutral-50 border border-neutral-200 rounded-md px-2 py-1 text-xs text-neutral-700 focus:outline-hidden"
                     id="duplex-item-mode"
                   >
                     <option value="two_page_items">{t.layout.duplexTwoSides}</option>
                     <option value="consecutive">{t.layout.duplexConsecutive}</option>
-                  </select>
+                  </Select>
                 </div>
 
                 <div className="flex flex-col gap-1">
                   <label className="text-[10px] text-neutral-500 font-medium">{t.layout.fillOrder}</label>
-                  <select
+                  <Select
+                    variant="subtle"
                     value={settings.gridOrder}
                     onChange={(e) => updateSetting('gridOrder', e.target.value as GridOrder)}
-                    className="bg-neutral-50 border border-neutral-200 rounded-md px-2 py-1 text-xs text-neutral-700 focus:outline-hidden"
                     id="grid-order"
                   >
                     <option value="rows">{t.layout.fillRows}</option>
                     <option value="columns">{t.layout.fillColumns}</option>
-                  </select>
+                  </Select>
                 </div>
               </div>
             )}

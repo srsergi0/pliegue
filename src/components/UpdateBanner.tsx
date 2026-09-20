@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useI18n } from '../i18n/I18nContext';
 import { Sparkles, Download, RefreshCw, CheckCircle2, X } from 'lucide-react';
+import { Button, IconButton } from './ui';
 import { UpdaterStatusData } from '../vite-env';
 
 export const UpdateBanner: React.FC = () => {
@@ -78,22 +79,22 @@ export const UpdateBanner: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-2 shrink-0">
-          <button
-            type="button"
+          <Button
+            variant="emeraldWhite"
+            size="sm"
             onClick={handleInstallNow}
-            className="flex items-center gap-1.5 bg-white hover:bg-emerald-50 text-emerald-950 font-bold px-3 py-1 rounded-md text-xs shadow-xs transition-all cursor-pointer"
           >
             <RefreshCw className="w-3 h-3 text-emerald-700" />
             <span>{t.updater.restartAndInstall}</span>
-          </button>
-          <button
-            type="button"
+          </Button>
+          <IconButton
+            tone="emeraldOnDark"
+            size="sm"
             onClick={() => setDismissed(true)}
-            className="p-1 text-emerald-300 hover:text-white rounded hover:bg-emerald-800 transition-colors cursor-pointer"
             title={t.updater.dismiss}
           >
             <X className="w-3.5 h-3.5" />
-          </button>
+          </IconButton>
         </div>
       </aside>
     );
@@ -123,14 +124,15 @@ export const UpdateBanner: React.FC = () => {
           </div>
         </div>
 
-        <button
-          type="button"
+        <IconButton
+          tone="neutralOnDark"
+          size="sm"
+          className="ml-3"
           onClick={() => setDismissed(true)}
-          className="p-1 text-neutral-400 hover:text-white rounded hover:bg-neutral-800 transition-colors cursor-pointer ml-3"
           title={t.updater.dismiss}
         >
           <X className="w-3.5 h-3.5" />
-        </button>
+        </IconButton>
       </aside>
     );
   }
@@ -158,22 +160,22 @@ export const UpdateBanner: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-2 shrink-0">
-          <button
-            type="button"
+          <Button
+            variant="dark"
+            size="sm"
             onClick={handleStartDownload}
-            className="flex items-center gap-1.5 bg-neutral-950 hover:bg-neutral-900 text-white font-semibold px-3 py-1 rounded-md text-xs shadow-xs transition-all cursor-pointer"
           >
             <Download className="w-3 h-3" />
             <span>{t.updater.downloadNow}</span>
-          </button>
-          <button
-            type="button"
+          </Button>
+          <IconButton
+            tone="amberOnDark"
+            size="sm"
             onClick={() => setDismissed(true)}
-            className="p-1 text-amber-200 hover:text-white rounded hover:bg-white/10 transition-colors cursor-pointer"
             title={t.updater.dismiss}
           >
             <X className="w-3.5 h-3.5" />
-          </button>
+          </IconButton>
         </div>
       </aside>
     );

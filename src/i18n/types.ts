@@ -60,6 +60,22 @@ export interface Translations {
     navAria: string;
     guideBadge: string;
   };
+  steps: {
+    summaryTitle: string;
+    product: string;
+    productHint: string;
+    sheet: string;
+    sheetHint: string;
+    distribution: string;
+    distributionHint: string;
+    print: string;
+    printHint: string;
+    finishing: string;
+    finishingHint: string;
+    advanced: string;
+    expandSection: string;
+    collapseSection: string;
+  };
   layout: {
     sheetSize: string;
     sheetPreset: string;

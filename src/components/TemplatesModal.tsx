@@ -3,6 +3,7 @@ import { WORKSHOP_PRESETS, JobTemplate } from '../constants/jobPresets';
 import { ImpositionSettings } from '../types';
 import { useI18n } from '../i18n/I18nContext';
 import { Sparkles, X, Check, ArrowRight, Save, Trash2, Star } from 'lucide-react';
+import { Button, IconButton, Input } from './ui';
 
 interface TemplatesModalProps {
   isOpen: boolean;
@@ -47,17 +48,18 @@ function TemplateCard({
       }`}
     >
       {isCustom && onDelete && (
-        <button
-          type="button"
+        <IconButton
+          tone="danger"
+          size="lg"
+          className="absolute top-2.5 right-2.5 text-neutral-300"
           onClick={(e) => {
             e.stopPropagation();
             onDelete();
           }}
-          className="absolute top-2.5 right-2.5 p-1.5 rounded-lg text-neutral-300 hover:text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
           title={deleteLabel}
         >
           <Trash2 className="w-3.5 h-3.5" />
-        </button>
+        </IconButton>
       )}
       <div>
         <div className="flex items-start justify-between gap-2 mb-2 pr-6">
@@ -169,14 +171,15 @@ export const TemplatesModal: React.FC<TemplatesModalProps> = ({
               </p>
             </div>
           </div>
-          <button
+          <IconButton
+            tone="neutral"
+            size="lg"
             onClick={onClose}
-            className="p-1.5 rounded-lg text-neutral-400 hover:text-neutral-700 hover:bg-neutral-200/60 transition-colors cursor-pointer"
             title={t.templates.close}
             id="btn-close-templates-modal"
           >
             <X className="w-5 h-5" />
-          </button>
+          </IconButton>
         </div>
 
         <div className="overflow-y-auto bg-neutral-100/40">
@@ -189,7 +192,7 @@ export const TemplatesModal: React.FC<TemplatesModalProps> = ({
               </div>
               <p className="text-[11px] text-neutral-500 mb-3">{t.templates.saveSectionDesc}</p>
               <div className="flex gap-2">
-                <input
+                <Input
                   type="text"
                   value={name}
                   maxLength={60}
@@ -201,19 +204,20 @@ export const TemplatesModal: React.FC<TemplatesModalProps> = ({
                     if (e.key === 'Enter') handleSave();
                   }}
                   placeholder={t.templates.savePlaceholder}
-                  className="flex-1 text-xs border border-neutral-200 rounded-lg px-3 py-2 outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-400/20 bg-neutral-50/50 placeholder:text-neutral-400"
+                  className="flex-1 border-neutral-200 rounded-lg px-3 py-2 outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-400/20 bg-neutral-50/50 placeholder:text-neutral-400"
                   id="input-custom-template-name"
                 />
-                <button
-                  type="button"
+                <Button
+                  variant="primary"
+                  size="smWide"
+                  className="shrink-0"
                   onClick={handleSave}
                   disabled={!name.trim()}
-                  className="flex items-center gap-1.5 bg-neutral-900 hover:bg-neutral-800 disabled:opacity-40 text-white text-xs font-semibold px-3.5 py-2 rounded-lg transition-colors cursor-pointer shrink-0"
                   id="btn-save-custom-template"
                 >
                   <Save className="w-3.5 h-3.5" />
                   <span>{t.templates.saveButton}</span>
-                </button>
+                </Button>
               </div>
               {formError && (
                 <p className="text-[11px] text-red-600 mt-2">{formError}</p>

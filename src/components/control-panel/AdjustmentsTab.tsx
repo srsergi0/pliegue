@@ -11,6 +11,7 @@ import {
   Sparkles,
 } from 'lucide-react';
 import { useI18n } from '../../i18n/I18nContext';
+import { SegmentedButton, Checkbox } from '../ui';
 
 interface AdjustmentsTabProps {
   settings: ImpositionSettings;
@@ -45,42 +46,30 @@ export const AdjustmentsTab: React.FC<AdjustmentsTabProps> = ({
 
         {/* Selector de modo dúplex en 3 botones limpios */}
         <div className="grid grid-cols-3 gap-1 bg-neutral-200/60 p-1 rounded-lg">
-          <button
-            type="button"
+          <SegmentedButton
+            active={settings.duplexMode === 'long_edge'}
+            size="md"
             onClick={() => updateSetting('duplexMode', 'long_edge')}
             title={t.adjustments.duplexLongHint}
-            className={`text-xs py-1.5 px-1 rounded-md font-semibold text-center transition-all cursor-pointer ${
-              settings.duplexMode === 'long_edge'
-                ? 'bg-neutral-900 text-white shadow-xs'
-                : 'text-neutral-600 hover:text-neutral-900 hover:bg-white/60'
-            }`}
           >
             {t.adjustments.duplexLong}
-          </button>
-          <button
-            type="button"
+          </SegmentedButton>
+          <SegmentedButton
+            active={settings.duplexMode === 'short_edge'}
+            size="md"
             onClick={() => updateSetting('duplexMode', 'short_edge')}
             title={t.adjustments.duplexShortHint}
-            className={`text-xs py-1.5 px-1 rounded-md font-semibold text-center transition-all cursor-pointer ${
-              settings.duplexMode === 'short_edge'
-                ? 'bg-neutral-900 text-white shadow-xs'
-                : 'text-neutral-600 hover:text-neutral-900 hover:bg-white/60'
-            }`}
           >
             {t.adjustments.duplexShort}
-          </button>
-          <button
-            type="button"
+          </SegmentedButton>
+          <SegmentedButton
+            active={settings.duplexMode === 'simplex'}
+            size="md"
             onClick={() => updateSetting('duplexMode', 'simplex')}
             title={t.adjustments.duplexSingleHint}
-            className={`text-xs py-1.5 px-1 rounded-md font-semibold text-center transition-all cursor-pointer ${
-              settings.duplexMode === 'simplex'
-                ? 'bg-neutral-900 text-white shadow-xs'
-                : 'text-neutral-600 hover:text-neutral-900 hover:bg-white/60'
-            }`}
           >
             {t.adjustments.duplexSingle}
-          </button>
+          </SegmentedButton>
         </div>
       </div>
 
@@ -95,54 +84,38 @@ export const AdjustmentsTab: React.FC<AdjustmentsTabProps> = ({
 
         {/* 4 modos de escala */}
         <div className="grid grid-cols-4 gap-1 bg-neutral-200/60 p-1 rounded-lg">
-          <button
-            type="button"
+          <SegmentedButton
+            active={settings.scaleMode === 'fit'}
+            size="sm"
             onClick={() => updateSetting('scaleMode', 'fit')}
-            className={`text-[11px] py-1.5 rounded-md font-semibold transition-all cursor-pointer text-center ${
-              settings.scaleMode === 'fit'
-                ? 'bg-neutral-900 text-white shadow-xs'
-                : 'text-neutral-600 hover:text-neutral-900 hover:bg-white/60'
-            }`}
             title={t.adjustments.scaleFitHint}
           >
             {t.adjustments.scaleFitShort}
-          </button>
-          <button
-            type="button"
+          </SegmentedButton>
+          <SegmentedButton
+            active={settings.scaleMode === 'fill'}
+            size="sm"
             onClick={() => updateSetting('scaleMode', 'fill')}
-            className={`text-[11px] py-1.5 rounded-md font-semibold transition-all cursor-pointer text-center ${
-              settings.scaleMode === 'fill'
-                ? 'bg-neutral-900 text-white shadow-xs'
-                : 'text-neutral-600 hover:text-neutral-900 hover:bg-white/60'
-            }`}
             title={t.adjustments.scaleFillHint}
           >
             {t.adjustments.scaleFillShort}
-          </button>
-          <button
-            type="button"
+          </SegmentedButton>
+          <SegmentedButton
+            active={settings.scaleMode === 'original'}
+            size="sm"
             onClick={() => updateSetting('scaleMode', 'original')}
-            className={`text-[11px] py-1.5 rounded-md font-semibold transition-all cursor-pointer text-center ${
-              settings.scaleMode === 'original'
-                ? 'bg-neutral-900 text-white shadow-xs'
-                : 'text-neutral-600 hover:text-neutral-900 hover:bg-white/60'
-            }`}
             title={t.adjustments.scale100Hint}
           >
             {t.adjustments.scale100Short}
-          </button>
-          <button
-            type="button"
+          </SegmentedButton>
+          <SegmentedButton
+            active={settings.scaleMode === 'custom'}
+            size="sm"
             onClick={() => updateSetting('scaleMode', 'custom')}
-            className={`text-[11px] py-1.5 rounded-md font-semibold transition-all cursor-pointer text-center ${
-              settings.scaleMode === 'custom'
-                ? 'bg-neutral-900 text-white shadow-xs'
-                : 'text-neutral-600 hover:text-neutral-900 hover:bg-white/60'
-            }`}
             title={t.adjustments.scaleManualHint}
           >
             {t.adjustments.scaleManualShort}
-          </button>
+          </SegmentedButton>
         </div>
 
         {/* Slider manual si aplica */}
@@ -191,29 +164,23 @@ export const AdjustmentsTab: React.FC<AdjustmentsTabProps> = ({
           <label className="text-[11px] font-medium text-neutral-600">{t.adjustments.baseAngle}</label>
           <div className="grid grid-cols-4 gap-1 bg-neutral-200/60 p-1 rounded-lg">
             {([0, 90, 180, 270] as const).map((angle) => (
-              <button
+              <SegmentedButton
                 key={angle}
-                type="button"
+                active={settings.pageRotation === angle}
+                size="xs"
                 onClick={() => updateSetting('pageRotation', angle)}
-                className={`text-xs py-1 rounded-md font-semibold transition-all cursor-pointer text-center ${
-                  settings.pageRotation === angle
-                    ? 'bg-neutral-900 text-white shadow-xs'
-                    : 'text-neutral-600 hover:text-neutral-900 hover:bg-white/60'
-                }`}
               >
                 {angle}°
-              </button>
+              </SegmentedButton>
             ))}
           </div>
         </div>
 
         {/* Auto rotar inteligente */}
         <label className="flex items-center gap-2 p-2 bg-white rounded-lg border border-neutral-200/80 cursor-pointer select-none">
-          <input
-            type="checkbox"
+          <Checkbox
             checked={settings.autoRotateToFit}
             onChange={(e) => updateSetting('autoRotateToFit', e.target.checked)}
-            className="w-4 h-4 accent-neutral-900 rounded border-neutral-300 cursor-pointer"
             id="checkbox-auto-rotate"
           />
           <div className="flex flex-col">
