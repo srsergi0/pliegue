@@ -10,5 +10,7 @@ export { Select } from './Select';
 export type { SelectProps, SelectVariant } from './Select';
 export { Input } from './Input';
 export type { InputProps, InputVariant } from './Input';
+export { NumberField } from './NumberField';
+export type { NumberFieldProps } from './NumberField';
 export { Checkbox } from './Checkbox';
 export type { CheckboxProps, CheckboxVariant } from './Checkbox';

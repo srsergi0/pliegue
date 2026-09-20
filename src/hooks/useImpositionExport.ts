@@ -86,11 +86,5 @@ export function useImpositionExport({
     }
   };
 
-  // Imprimir pliego activo con el diálogo de impresión del sistema
-  const handlePrint = () => {
-    if (!pdfBytes || plan.length === 0) return;
-    window.print();
-  };
-
-  return { exporting, handleExportFinalPDF, handlePrint };
+  return { exporting, handleExportFinalPDF };
 }

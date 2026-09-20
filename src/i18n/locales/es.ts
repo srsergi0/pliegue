@@ -20,6 +20,7 @@ export const es: Translations = {
     dropPdfHere: 'Arrastra tu archivo PDF aquí o',
     dropPdfActive: '¡Suelta el archivo PDF aquí!',
     closeNotification: 'Cerrar notificación',
+    removeFile: 'Quitar archivo',
     pdfSavedSuccess: '¡PDF guardado exitosamente!',
     appliedTemplate: 'Plantilla aplicada',
     savedTemplate: 'Plantilla guardada',
@@ -50,16 +51,6 @@ export const es: Translations = {
     demoFailed: 'Error al generar el documento de demostración.',
     exportFailed: 'Error al ensamblar el PDF final. Verifica los parámetros de márgenes o grilla.',
     exportTooLarge: 'El PDF es demasiado pesado para exportarlo de una vez (memoria agotada). Prueba con menos páginas, dividiendo el documento o cerrando otras aplicaciones.',
-  },
-  tabs: {
-    layout: 'Distribución',
-    margins: 'Márgenes y Corte',
-    adjustments: 'Ajustes',
-    shortLayout: 'Pliego',
-    shortAdjustments: 'Dúplex',
-    shortMargins: 'Corte',
-    navAria: 'Secciones de configuración',
-    guideBadge: 'Guía',
   },
   steps: {
     summaryTitle: 'Resumen del trabajo',
@@ -241,6 +232,8 @@ export const es: Translations = {
     clickToDisableTooltip: 'Clic para desactivar página',
     clickToEnableTooltip: 'Clic para reactivar página',
     restoreAll: 'Reactivar todas',
+    hidePanel: 'Ocultar panel',
+    showPanel: 'Mostrar páginas desactivadas',
     renderError: 'Error de renderizado',
     emptyTitle: 'Previsualización del Pliego',
     emptyDesc:

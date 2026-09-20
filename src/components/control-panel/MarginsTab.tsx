@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { ImpositionSettings } from '../../types';
 import { Crop, Link2, Unlink2, Scissors, LayoutDashboard } from 'lucide-react';
 import { useI18n } from '../../i18n/I18nContext';
-import { Button, Input, Checkbox } from '../ui';
+import { Button, NumberField, Checkbox } from '../ui';
 
 interface MarginsTabProps {
   settings: ImpositionSettings;
@@ -123,12 +123,11 @@ export const MarginsTab: React.FC<MarginsTabProps> = ({
           <div className="flex items-center justify-between bg-white border border-neutral-200/90 rounded-lg px-2.5 py-1.5 shadow-2xs">
             <span className="text-[11px] font-medium text-neutral-500">{t.margins.top}</span>
             <div className="flex items-center gap-1">
-              <Input
+              <NumberField
                 variant="inline"
-                type="number"
                 min={0}
                 value={settings.marginTop}
-                onChange={(e) => handleMarginChange('marginTop', Number(e.target.value))}
+                onValueChange={(v) => handleMarginChange('marginTop', v)}
                 id="margin-top"
               />
               <span className="text-[10px] text-neutral-400 font-mono">mm</span>
@@ -139,12 +138,11 @@ export const MarginsTab: React.FC<MarginsTabProps> = ({
           <div className="flex items-center justify-between bg-white border border-neutral-200/90 rounded-lg px-2.5 py-1.5 shadow-2xs">
             <span className="text-[11px] font-medium text-neutral-500">{t.margins.bottom}</span>
             <div className="flex items-center gap-1">
-              <Input
+              <NumberField
                 variant="inline"
-                type="number"
                 min={0}
                 value={settings.marginBottom}
-                onChange={(e) => handleMarginChange('marginBottom', Number(e.target.value))}
+                onValueChange={(v) => handleMarginChange('marginBottom', v)}
                 id="margin-bottom"
               />
               <span className="text-[10px] text-neutral-400 font-mono">mm</span>
@@ -155,12 +153,11 @@ export const MarginsTab: React.FC<MarginsTabProps> = ({
           <div className="flex items-center justify-between bg-white border border-neutral-200/90 rounded-lg px-2.5 py-1.5 shadow-2xs">
             <span className="text-[11px] font-medium text-neutral-500">{t.margins.left}</span>
             <div className="flex items-center gap-1">
-              <Input
+              <NumberField
                 variant="inline"
-                type="number"
                 min={0}
                 value={settings.marginLeft}
-                onChange={(e) => handleMarginChange('marginLeft', Number(e.target.value))}
+                onValueChange={(v) => handleMarginChange('marginLeft', v)}
                 id="margin-left"
               />
               <span className="text-[10px] text-neutral-400 font-mono">mm</span>
@@ -171,12 +168,11 @@ export const MarginsTab: React.FC<MarginsTabProps> = ({
           <div className="flex items-center justify-between bg-white border border-neutral-200/90 rounded-lg px-2.5 py-1.5 shadow-2xs">
             <span className="text-[11px] font-medium text-neutral-500">{t.margins.right}</span>
             <div className="flex items-center gap-1">
-              <Input
+              <NumberField
                 variant="inline"
-                type="number"
                 min={0}
                 value={settings.marginRight}
-                onChange={(e) => handleMarginChange('marginRight', Number(e.target.value))}
+                onValueChange={(v) => handleMarginChange('marginRight', v)}
                 id="margin-right"
               />
               <span className="text-[10px] text-neutral-400 font-mono">mm</span>
@@ -214,12 +210,11 @@ export const MarginsTab: React.FC<MarginsTabProps> = ({
           <div className="flex items-center justify-between bg-white border border-neutral-200/90 rounded-lg px-2.5 py-1.5 shadow-2xs">
             <span className="text-[11px] font-medium text-neutral-500">{t.margins.horizontalGutter}</span>
             <div className="flex items-center gap-1">
-              <Input
+              <NumberField
                 variant="inline"
-                type="number"
                 min={0}
                 value={settings.gutterHorizontal}
-                onChange={(e) => updateSetting('gutterHorizontal', Math.max(0, Number(e.target.value)))}
+                onValueChange={(v) => updateSetting('gutterHorizontal', v)}
                 id="gutter-horizontal"
               />
               <span className="text-[10px] text-neutral-400 font-mono">mm</span>
@@ -230,12 +225,11 @@ export const MarginsTab: React.FC<MarginsTabProps> = ({
           <div className="flex items-center justify-between bg-white border border-neutral-200/90 rounded-lg px-2.5 py-1.5 shadow-2xs">
             <span className="text-[11px] font-medium text-neutral-500">{t.margins.verticalGutter}</span>
             <div className="flex items-center gap-1">
-              <Input
+              <NumberField
                 variant="inline"
-                type="number"
                 min={0}
                 value={settings.gutterVertical}
-                onChange={(e) => updateSetting('gutterVertical', Math.max(0, Number(e.target.value)))}
+                onValueChange={(v) => updateSetting('gutterVertical', v)}
                 id="gutter-vertical"
               />
               <span className="text-[10px] text-neutral-400 font-mono">mm</span>
@@ -273,23 +267,21 @@ export const MarginsTab: React.FC<MarginsTabProps> = ({
           <div className="grid grid-cols-2 gap-2 p-2 bg-white rounded-lg border border-neutral-200">
             <div className="flex flex-col gap-1">
               <label className="text-[10px] text-neutral-500 font-mono">{t.margins.bleed}</label>
-              <Input
-                type="number"
+              <NumberField
                 min={0}
                 step={0.5}
                 value={settings.bleed}
-                onChange={(e) => updateSetting('bleed', Math.max(0, Number(e.target.value)))}
+                onValueChange={(v) => updateSetting('bleed', v)}
                 className="font-bold"
                 id="bleed"
               />
             </div>
             <div className="flex flex-col gap-1">
               <label className="text-[10px] text-neutral-500 font-mono">{t.margins.markLength}</label>
-              <Input
-                type="number"
+              <NumberField
                 min={1}
                 value={settings.cropMarkLength}
-                onChange={(e) => updateSetting('cropMarkLength', Math.max(1, Number(e.target.value)))}
+                onValueChange={(v) => updateSetting('cropMarkLength', v)}
                 className="font-bold"
                 id="crop-mark-length"
               />

@@ -20,6 +20,7 @@ export const ja: Translations = {
     dropPdfHere: 'ここにPDFファイルをドラッグ＆ドロップ、または',
     dropPdfActive: 'PDFファイルをドロップしてください！',
     closeNotification: '通知を閉じる',
+    removeFile: 'ファイルを削除',
     pdfSavedSuccess: 'PDFが正常に保存されました！',
     appliedTemplate: '適用されたプリセット',
     savedTemplate: 'プリセットを保存しました',
@@ -50,16 +51,6 @@ export const ja: Translations = {
     demoFailed: 'デモドキュメントの生成に失敗しました。',
     exportFailed: '最終PDFの生成に失敗しました。余白・グリッド設定を確認してください。',
     exportTooLarge: 'PDFが重すぎて一括書き出しできません（メモリ不足）。ページを減らす、文書を分割する、他のアプリを閉じるなどしてお試しください。',
-  },
-  tabs: {
-    layout: '面付け配置',
-    margins: '余白・トンボ',
-    adjustments: '詳細設定',
-    shortLayout: '用紙',
-    shortAdjustments: '両面',
-    shortMargins: '断裁',
-    navAria: '設定セクション',
-    guideBadge: 'ガイド',
   },
   steps: {
     summaryTitle: 'ジョブ概要',
@@ -241,6 +232,8 @@ export const ja: Translations = {
     clickToDisableTooltip: 'クリックしてページを除外/無効化',
     clickToEnableTooltip: 'クリックしてページを再有効化',
     restoreAll: 'すべて再有効化',
+    hidePanel: 'パネルを隠す',
+    showPanel: '無効ページを表示',
     renderError: 'レンダーエラー',
     emptyTitle: '用紙プレビュー',
     emptyDesc:

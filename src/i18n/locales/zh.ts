@@ -20,6 +20,7 @@ export const zh: Translations = {
     dropPdfHere: '将PDF文件拖拽至此处，或',
     dropPdfActive: '释放以添加PDF文件！',
     closeNotification: '关闭通知',
+    removeFile: '移除文件',
     pdfSavedSuccess: 'PDF文件已成功保存！',
     appliedTemplate: '已应用预设模板',
     savedTemplate: '模板已保存',
@@ -50,16 +51,6 @@ export const zh: Translations = {
     demoFailed: '生成演示文档失败。',
     exportFailed: '最终PDF组装失败。请检查边距和网格参数。',
     exportTooLarge: 'PDF文件过重，无法一次导出（内存不足）。请尝试减少页数、拆分文档或关闭其他应用。',
-  },
-  tabs: {
-    layout: '拼版分布',
-    margins: '边距与角线',
-    adjustments: '印刷调整',
-    shortLayout: '纸张',
-    shortAdjustments: '双面',
-    shortMargins: '裁切',
-    navAria: '设置分区',
-    guideBadge: '参考线',
   },
   steps: {
     summaryTitle: '作业摘要',
@@ -241,6 +232,8 @@ export const zh: Translations = {
     clickToDisableTooltip: '点击以排除/禁用此页面',
     clickToEnableTooltip: '点击以重新启用此页面',
     restoreAll: '全部重新启用',
+    hidePanel: '隐藏面板',
+    showPanel: '显示已禁用页面',
     renderError: '渲染错误',
     emptyTitle: '印张预览',
     emptyDesc:

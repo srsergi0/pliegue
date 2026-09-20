@@ -32,7 +32,7 @@ export const StepSection: React.FC<StepSectionProps> = ({
   return (
     <section
       id={id}
-      className="bg-neutral-50/90 rounded-xl border border-neutral-200/90 overflow-hidden scroll-mt-2"
+      className="shrink-0 bg-neutral-50/90 rounded-xl border border-neutral-200/90 overflow-hidden scroll-mt-2"
     >
       <button
         type="button"

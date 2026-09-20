@@ -3,7 +3,7 @@ import { ImpositionSettings, ImposedSheet } from './types';
 import { generateImpositionPlan } from './utils/imposition';
 import { ControlPanel } from './components/ControlPanel';
 import { ImpositionPreview } from './components/ImpositionPreview';
-import { ProductionSummary } from './components/ProductionSummary';
+import { StatusBar } from './app/StatusBar';
 import { TemplatesModal } from './components/TemplatesModal';
 import { UpdateBanner } from './components/UpdateBanner';
 import { JobTemplate } from './constants/jobPresets';
@@ -26,6 +26,7 @@ export default function App() {
   const [isTemplatesOpen, setIsTemplatesOpen] = useState(false);
   const [toastMsg, setToastMsg] = useState<string | null>(null);
   const [customTemplates, setCustomTemplates] = useState<JobTemplate[]>(() => loadCustomTemplates());
+  const [currentSheetIdx, setCurrentSheetIdx] = useState(0);
 
   const {
     pdfBytes,
@@ -104,7 +105,7 @@ export default function App() {
     });
   }, [settings, sourcePDFInfo, t]);
 
-  const { exporting, handleExportFinalPDF, handlePrint } = useImpositionExport({
+  const { exporting, handleExportFinalPDF } = useImpositionExport({
     pdfBytes,
     sourcePDFInfo,
     plan,
@@ -115,10 +116,8 @@ export default function App() {
 
   useKeyboardShortcuts({
     canExport: !!pdfBytes && plan.length > 0 && !exporting,
-    canPrint: !!pdfBytes && plan.length > 0,
     onOpen: handleOpenAnotherFile,
     onExport: handleExportFinalPDF,
-    onPrint: handlePrint,
   });
 
   // Evitar que el navegador o Electron navegue al archivo si se suelta fuera de la tarjeta
@@ -136,10 +135,9 @@ export default function App() {
 
   const hasPdf = !!pdfBytes;
   const canExport = hasPdf && plan.length > 0;
-  const canPrint = hasPdf && plan.length > 0;
 
   return (
-    <div className="min-h-screen bg-neutral-50 text-neutral-800 flex flex-col font-sans selection:bg-neutral-200 relative overflow-x-clip">
+    <div className="h-full overflow-hidden bg-neutral-50 text-neutral-800 flex flex-col font-sans selection:bg-neutral-200 relative">
       {/* Hidden file input for web fallback */}
       <input
         ref={hiddenFileInputRef}
@@ -153,21 +151,18 @@ export default function App() {
       <AppHeader
         hasPdf={hasPdf}
         isElectron={isElectron}
+        sourcePDFInfo={sourcePDFInfo}
         parsing={parsing}
         exporting={exporting}
         canExport={canExport}
-        canPrint={canPrint}
         onOpenTemplates={() => setIsTemplatesOpen(true)}
         onOpenAnother={handleOpenAnotherFile}
-        onPrint={handlePrint}
+        onRemoveFile={handleRemoveFile}
         onExport={handleExportFinalPDF}
       />
 
       {/* Auto-Update Banner */}
       <UpdateBanner />
-
-      {/* Slim production summary (loaded job only) */}
-      {hasPdf && <ProductionSummary settings={settings} plan={plan} />}
 
       {/* Desktop Saved Notification Banner */}
       <SaveBanner
@@ -177,7 +172,7 @@ export default function App() {
       />
 
       {/* Main Workspace */}
-      <main className="flex-1 flex flex-col md:flex-row overflow-hidden min-w-0">
+      <main className="flex-1 flex flex-col md:flex-row overflow-hidden min-w-0 min-h-0">
         {!hasPdf ? (
           <WelcomeScreen
             errorMsg={errorMsg}
@@ -193,15 +188,13 @@ export default function App() {
           />
         ) : (
           /* Full Screen Workspace Layout when PDF is loaded */
-          <div className="flex-1 flex flex-col lg:flex-row overflow-hidden min-w-0">
+          <div className="flex-1 flex flex-col lg:flex-row overflow-hidden min-w-0 min-h-0">
             {/* Left Column: Precise Controls */}
-            <aside className="w-full lg:w-95 shrink-0 border-r border-neutral-200/80 bg-neutral-50/20 max-h-112.5 lg:max-h-none overflow-y-auto">
+            <aside className="w-full lg:w-95 shrink-0 border-r border-neutral-200/80 bg-neutral-50/20 flex flex-col min-h-0 max-h-112.5 lg:max-h-none">
               <ControlPanel
                 settings={settings}
                 onChangeSettings={setSettings}
                 sourcePDFInfo={sourcePDFInfo}
-                onRemoveFile={handleRemoveFile}
-                onOpenNewFile={handleOpenAnotherFile}
               />
             </aside>
 
@@ -215,19 +208,31 @@ export default function App() {
                 </div>
               )}
 
-              <div className="flex-1">
+              <div className="flex-1 min-h-0 overflow-hidden">
                 <ImpositionPreview
                   settings={settings}
                   onChangeSettings={setSettings}
                   plan={plan}
                   sourcePDFInfo={sourcePDFInfo}
                   pdfDocProxy={pdfDocProxy}
+                  currentSheetIdx={currentSheetIdx}
+                  onChangeSheetIdx={setCurrentSheetIdx}
                 />
               </div>
             </section>
           </div>
         )}
       </main>
+
+      {/* Bottom status bar: production summary + current sheet info */}
+      {hasPdf && (
+        <StatusBar
+          settings={settings}
+          plan={plan}
+          activeSheet={plan[currentSheetIdx]}
+          currentSheetIdx={currentSheetIdx}
+        />
+      )}
 
       {/* Templates Modal */}
       <TemplatesModal

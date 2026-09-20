@@ -11,7 +11,7 @@ import {
   Sparkles,
 } from 'lucide-react';
 import { useI18n } from '../../i18n/I18nContext';
-import { SegmentedButton, Checkbox } from '../ui';
+import { SegmentedButton, Checkbox, NumberField } from '../ui';
 
 interface AdjustmentsTabProps {
   settings: ImpositionSettings;
@@ -131,20 +131,16 @@ export const AdjustmentsTab: React.FC<AdjustmentsTabProps> = ({
               id="scale-slider"
             />
             <div className="flex items-center gap-1">
-              <input
-                type="number"
-                min={10}
-                max={200}
-                value={settings.customScale}
-                onChange={(e) =>
-                  updateSetting(
-                    'customScale',
-                    Math.max(10, Math.min(200, Number(e.target.value)))
-                  )
-                }
-                className="w-14 bg-neutral-50 border border-neutral-200 rounded-md px-1.5 py-0.5 text-center text-xs text-neutral-800 font-bold"
-                id="scale-input"
-              />
+              <div className="w-14">
+                <NumberField
+                  min={10}
+                  max={200}
+                  value={settings.customScale}
+                  onValueChange={(v) => updateSetting('customScale', v)}
+                  className="text-center font-bold px-1.5 py-0.5"
+                  id="scale-input"
+                />
+              </div>
               <span className="text-xs text-neutral-500 font-mono">%</span>
             </div>
           </div>

@@ -20,6 +20,7 @@ export const en: Translations = {
     dropPdfHere: 'Drag & drop your PDF file here or',
     dropPdfActive: 'Drop the PDF file here!',
     closeNotification: 'Close notification',
+    removeFile: 'Remove file',
     pdfSavedSuccess: 'PDF saved successfully!',
     appliedTemplate: 'Template applied',
     savedTemplate: 'Template saved',
@@ -50,16 +51,6 @@ export const en: Translations = {
     demoFailed: 'Failed to generate the demo document.',
     exportFailed: 'Failed to assemble the final PDF. Check margin and grid settings.',
     exportTooLarge: 'The PDF is too heavy to export at once (out of memory). Try fewer pages, splitting the document, or closing other apps.',
-  },
-  tabs: {
-    layout: 'Layout & Imposition',
-    margins: 'Margins & Marks',
-    adjustments: 'Adjustments',
-    shortLayout: 'Sheet',
-    shortAdjustments: 'Duplex',
-    shortMargins: 'Trim',
-    navAria: 'Settings sections',
-    guideBadge: 'Guide',
   },
   steps: {
     summaryTitle: 'Job summary',
@@ -241,6 +232,8 @@ export const en: Translations = {
     clickToDisableTooltip: 'Click to disable page',
     clickToEnableTooltip: 'Click to reactivate page',
     restoreAll: 'Restore All',
+    hidePanel: 'Hide panel',
+    showPanel: 'Show disabled pages',
     renderError: 'Render error',
     emptyTitle: 'Sheet preview',
     emptyDesc:

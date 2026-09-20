@@ -20,6 +20,7 @@ export interface Translations {
     dropPdfHere: string;
     dropPdfActive: string;
     closeNotification: string;
+    removeFile: string;
     pdfSavedSuccess: string;
     appliedTemplate: string;
     savedTemplate: string;
@@ -49,16 +50,6 @@ export interface Translations {
     demoFailed: string;
     exportFailed: string;
     exportTooLarge: string;
-  };
-  tabs: {
-    layout: string;
-    margins: string;
-    adjustments: string;
-    shortLayout: string;
-    shortAdjustments: string;
-    shortMargins: string;
-    navAria: string;
-    guideBadge: string;
   };
   steps: {
     summaryTitle: string;
@@ -240,6 +231,8 @@ export interface Translations {
     clickToDisableTooltip: string;
     clickToEnableTooltip: string;
     restoreAll: string;
+    hidePanel: string;
+    showPanel: string;
     renderError: string;
     emptyTitle: string;
     emptyDesc: string;

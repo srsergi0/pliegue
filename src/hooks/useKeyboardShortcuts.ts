@@ -2,22 +2,18 @@ import { useEffect } from 'react';
 
 interface UseKeyboardShortcutsParams {
   canExport: boolean;
-  canPrint: boolean;
   onOpen: () => void;
   onExport: () => void;
-  onPrint: () => void;
 }
 
 /**
- * Global workflow shortcuts: Ctrl/Cmd+O open, Ctrl/Cmd+S export, Ctrl/Cmd+P print.
+ * Global workflow shortcuts: Ctrl/Cmd+O open, Ctrl/Cmd+S export.
  * Ignored while the user is typing in a form field.
  */
 export function useKeyboardShortcuts({
   canExport,
-  canPrint,
   onOpen,
   onExport,
-  onPrint,
 }: UseKeyboardShortcutsParams) {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -41,15 +37,9 @@ export function useKeyboardShortcuts({
         e.preventDefault();
         onExport();
       }
-
-      // Ctrl+P o Cmd+P para imprimir (diálogo del sistema)
-      if (mod && key === 'p' && canPrint) {
-        e.preventDefault();
-        onPrint();
-      }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [canExport, canPrint, onOpen, onExport, onPrint]);
+  }, [canExport, onOpen, onExport]);
 }
