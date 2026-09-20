@@ -270,6 +270,16 @@ export const en: Translations = {
     flipWord: 'Flip',
     lightWord: 'Light Table',
   },
+  summary: {
+    title: 'Production summary',
+    impressions: 'impressions',
+    sheets: 'sheets',
+    perSide: 'per side',
+    sides: 'sides',
+    signatures: 'signatures',
+    blanks: 'blank',
+    excluded: 'excluded',
+  },
   templates: {
     modalTitle: 'Print Workshop Presets',
     modalSubtitle: 'Tested configurations for standard commercial printing and bindery formats.',

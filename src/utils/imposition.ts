@@ -620,7 +620,7 @@ function normalizeRotation(angle: number): 0 | 90 | 180 | 270 {
  * a long-edge turn mirrors columns on portrait sheets but rows on landscape
  * sheets; a short-edge turn does the opposite.
  */
-function isBackSideHorizontallyMirrored(settings: ImpositionSettings): boolean {
+export function isBackSideHorizontallyMirrored(settings: ImpositionSettings): boolean {
   // Explicit back faces in sheetwise/manual printing use a book turn by default.
   if (settings.duplexMode === 'simplex') return true;
 

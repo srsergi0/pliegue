@@ -267,6 +267,16 @@ export interface Translations {
     flipWord: string;
     lightWord: string;
   };
+  summary: {
+    title: string;
+    impressions: string;
+    sheets: string;
+    perSide: string;
+    sides: string;
+    signatures: string;
+    blanks: string;
+    excluded: string;
+  };
   templates: {
     modalTitle: string;
     modalSubtitle: string;

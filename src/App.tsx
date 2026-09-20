@@ -4,6 +4,7 @@ import { generateImpositionPlan } from './utils/imposition';
 import { generateImposedPDF } from './utils/pdfGenerator';
 import { ControlPanel } from './components/ControlPanel';
 import { ImpositionPreview } from './components/ImpositionPreview';
+import { ProductionSummary } from './components/ProductionSummary';
 import { TemplatesModal } from './components/TemplatesModal';
 import { LanguageSelector } from './components/LanguageSelector';
 import { UpdateBanner } from './components/UpdateBanner';
@@ -587,6 +588,9 @@ export default function App() {
 
       {/* Auto-Update Banner */}
       <UpdateBanner />
+
+      {/* Slim production summary (loaded job only) */}
+      {pdfBytes && <ProductionSummary settings={settings} plan={plan} />}
 
       {/* Desktop Saved Notification Banner */}
       {savedFilePath && (

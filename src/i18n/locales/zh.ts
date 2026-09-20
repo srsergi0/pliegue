@@ -270,6 +270,16 @@ export const zh: Translations = {
     flipWord: '翻转',
     lightWord: '透光台',
   },
+  summary: {
+    title: '生产摘要',
+    impressions: '印版',
+    sheets: '张',
+    perSide: '面/张',
+    sides: '面',
+    signatures: '折帖',
+    blanks: '空白',
+    excluded: '排除',
+  },
   templates: {
     modalTitle: '印刷车间快捷模板',
     modalSubtitle: '经过生产线实测验证的商业印刷与书刊常用工艺规格。',

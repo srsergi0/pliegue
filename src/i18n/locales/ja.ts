@@ -270,6 +270,16 @@ export const ja: Translations = {
     flipWord: '切替',
     lightWord: '透視',
   },
+  summary: {
+    title: '生産サマリー',
+    impressions: '面付け',
+    sheets: '枚',
+    perSide: '面/枚',
+    sides: '面',
+    signatures: '折り',
+    blanks: '白紙',
+    excluded: '除外',
+  },
   templates: {
     modalTitle: '印刷工房プリセット一覧',
     modalSubtitle: '商業印刷や出版製本で実証済みの標準プリセット集。',

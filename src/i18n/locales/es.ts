@@ -270,6 +270,16 @@ export const es: Translations = {
     flipWord: 'Voltear',
     lightWord: 'Trasluz',
   },
+  summary: {
+    title: 'Resumen de producción',
+    impressions: 'pliegos',
+    sheets: 'hojas',
+    perSide: 'por cara',
+    sides: 'caras',
+    signatures: 'firmas',
+    blanks: 'en blanco',
+    excluded: 'excluidas',
+  },
   templates: {
     modalTitle: 'Plantillas de Taller de Impresión',
     modalSubtitle: 'Configuraciones probadas para formatos habituales de imprenta y preprensa.',

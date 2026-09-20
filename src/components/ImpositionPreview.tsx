@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { pdfjs } from '../utils/pdfSetup';
 import { ImpositionSettings, ImposedSheet, PDFSourceInfo, PagePart } from '../types';
-import { getEffectiveSheetDimensions } from '../utils/imposition';
+import { getEffectiveSheetDimensions, isBackSideHorizontallyMirrored } from '../utils/imposition';
 import { useI18n } from '../i18n/I18nContext';
 import { Eye, ChevronLeft, ChevronRight, RefreshCw, Info, ArrowRightLeft, Scissors, Sun, EyeOff, RotateCcw, FileText } from 'lucide-react';
 
@@ -16,9 +16,41 @@ interface PDFPageThumbnailProps {
 }
 
 /**
- * Renders an actual PDF page to a high-resolution Canvas,
- * correctly scaled, centered and rotated natively by PDF.js,
- * with support for splitting panoramic double spreads into halves.
+ * Rotates a canvas clockwise by 0, 90, 180 or 270 degrees.
+ */
+function rotateCanvasClockwise(source: HTMLCanvasElement, angle: number): HTMLCanvasElement {
+  const a = ((angle % 360) + 360) % 360;
+  const sw = source.width;
+  const sh = source.height;
+  const output = document.createElement('canvas');
+  if (a === 90 || a === 270) {
+    output.width = sh;
+    output.height = sw;
+  } else {
+    output.width = sw;
+    output.height = sh;
+  }
+  const ctx = output.getContext('2d');
+  if (!ctx) return source;
+  if (a === 90) {
+    ctx.translate(sh, 0);
+    ctx.rotate(Math.PI / 2);
+  } else if (a === 180) {
+    ctx.translate(sw, sh);
+    ctx.rotate(Math.PI);
+  } else if (a === 270) {
+    ctx.translate(0, sw);
+    ctx.rotate(-Math.PI / 2);
+  }
+  ctx.drawImage(source, 0, 0);
+  return output;
+}
+
+/**
+ * Renders a PDF page exactly as the exported PDF places it: the split crop is
+ * taken in the raw (unrotated) page space using the page `/Rotate` metadata,
+ * then the fragment is rotated by the cell rotation, and the final box is sized
+ * with the same scale rules as pdfGenerator. This keeps the preview WYSIWYG.
  */
 const PDFPageThumbnail: React.FC<PDFPageThumbnailProps> = ({
   pdfDocument,
@@ -33,6 +65,7 @@ const PDFPageThumbnail: React.FC<PDFPageThumbnailProps> = ({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const [placement, setPlacement] = useState<{ w: number; h: number } | null>(null);
   const renderTaskRef = useRef<any>(null);
 
   useEffect(() => {
@@ -49,76 +82,104 @@ const PDFPageThumbnail: React.FC<PDFPageThumbnailProps> = ({
         const page = await pdfDocument.getPage(pageIndex + 1);
         if (!active) return;
 
-        const canvas = canvasRef.current;
-        const ctx = canvas.getContext('2d');
-        if (!ctx) return;
+        const MM_TO_PT = 72 / 25.4;
 
-        // In PDF.js, page.rotate is the page's natural rotation metadata.
-        // We pass the final combined clockwise angle directly to getViewport.
-        const totalClockwiseAngle = (page.rotate + rotation) % 360;
+        // Raw (unrotated) page size in points, matching pdf-lib getWidth/getHeight.
+        const rawViewport = page.getViewport({ scale: 1.0, rotation: 0 });
+        const rawWPt = rawViewport.width;
+        const rawHPt = rawViewport.height;
 
-        // Viewport at scale 1.0 to get rotated dimensions in points
-        const testViewport = page.getViewport({ scale: 1.0, rotation: totalClockwiseAngle });
+        const origAngle = ((page.rotate % 360) + 360) % 360;
         const isSplit = pagePart === 'left_half' || pagePart === 'right_half';
-        const rotWMm = ((testViewport.width * 25.4) / 72) / (isSplit ? 2 : 1);
-        const rotHMm = (testViewport.height * 25.4) / 72;
 
-        // Calculate fit scale factor
+        // Crop box in raw PDF points (bottom-left origin), identical to pdfGenerator.
+        let boxLeft = 0;
+        let boxBottom = 0;
+        let boxRight = rawWPt;
+        let boxTop = rawHPt;
+        if (isSplit) {
+          if (origAngle === 0) {
+            if (pagePart === 'left_half') boxRight = rawWPt / 2;
+            else boxLeft = rawWPt / 2;
+          } else if (origAngle === 90) {
+            if (pagePart === 'left_half') boxBottom = rawHPt / 2;
+            else boxTop = rawHPt / 2;
+          } else if (origAngle === 180) {
+            if (pagePart === 'left_half') boxLeft = rawWPt / 2;
+            else boxRight = rawWPt / 2;
+          } else if (origAngle === 270) {
+            if (pagePart === 'left_half') boxTop = rawHPt / 2;
+            else boxBottom = rawHPt / 2;
+          }
+        }
+        const boxWPt = boxRight - boxLeft;
+        const boxHPt = boxTop - boxBottom;
+
+        // Total clockwise turn applied by pdfGenerator (cell rotation + page /Rotate).
+        const totalClockwise = (((rotation + origAngle) % 360) + 360) % 360;
+        const isRotSwapped = totalClockwise === 90 || totalClockwise === 270;
+
+        // Visual size of the fragment as drawn in the exported PDF.
+        const finalVisualWMm = (isRotSwapped ? boxHPt : boxWPt) / MM_TO_PT;
+        const finalVisualHMm = (isRotSwapped ? boxWPt : boxHPt) / MM_TO_PT;
+
+        // Same scale rules as pdfGenerator.
         let scale = 1;
         if (settings.scaleMode === 'fit') {
-          scale = Math.min(cellWidthMm / rotWMm, cellHeightMm / rotHMm);
+          scale = Math.min(cellWidthMm / finalVisualWMm, cellHeightMm / finalVisualHMm);
         } else if (settings.scaleMode === 'fill') {
-          scale = Math.max(cellWidthMm / rotWMm, cellHeightMm / rotHMm);
+          scale = Math.max(cellWidthMm / finalVisualWMm, cellHeightMm / finalVisualHMm);
         } else if (settings.scaleMode === 'custom') {
           scale = settings.customScale / 100;
-        } else {
-          scale = 1;
         }
+        const placedWMm = finalVisualWMm * scale;
+        const placedHMm = finalVisualHMm * scale;
 
-        // Target pixel resolution for crisp preview display
-        const pixelScale = Math.max(1.5, Math.min(3.0, 800 / Math.max(testViewport.width, testViewport.height)));
+        // Render the raw page, crop the fragment and rotate it exactly like the PDF.
+        const renderScale = Math.max(0.75, Math.min(4, 1100 / Math.max(boxWPt, boxHPt)));
+        const fullViewport = page.getViewport({ scale: renderScale, rotation: 0 });
+        const fullCanvas = document.createElement('canvas');
+        fullCanvas.width = Math.max(1, Math.ceil(fullViewport.width));
+        fullCanvas.height = Math.max(1, Math.ceil(fullViewport.height));
+        const fullCtx = fullCanvas.getContext('2d');
+        if (!fullCtx) return;
 
-        // Cancel previous render if any
         if (renderTaskRef.current) {
           renderTaskRef.current.cancel();
         }
+        const renderTask = page.render({ canvasContext: fullCtx, viewport: fullViewport });
+        renderTaskRef.current = renderTask;
+        await renderTask.promise;
+        if (!active) return;
 
-        const renderViewport = page.getViewport({ scale: pixelScale, rotation: totalClockwiseAngle });
+        // PDF coordinates are bottom-left based; the canvas is top-left based.
+        const pxLeft = Math.round(boxLeft * renderScale);
+        const pxTop = Math.round((rawHPt - boxTop) * renderScale);
+        const pxW = Math.max(1, Math.round(boxWPt * renderScale));
+        const pxH = Math.max(1, Math.round(boxHPt * renderScale));
 
-        if (isSplit) {
-          const offscreen = document.createElement('canvas');
-          offscreen.width = renderViewport.width;
-          offscreen.height = renderViewport.height;
-          const offCtx = offscreen.getContext('2d');
-          if (!offCtx) return;
+        const fragCanvas = document.createElement('canvas');
+        fragCanvas.width = pxW;
+        fragCanvas.height = pxH;
+        const fragCtx = fragCanvas.getContext('2d');
+        if (!fragCtx) return;
+        fragCtx.drawImage(fullCanvas, pxLeft, pxTop, pxW, pxH, 0, 0, pxW, pxH);
 
-          const renderTask = page.render({ canvasContext: offCtx, viewport: renderViewport });
-          renderTaskRef.current = renderTask;
-          await renderTask.promise;
+        const rotated = rotateCanvasClockwise(fragCanvas, totalClockwise);
 
-          if (!active) return;
-          const halfW = Math.floor(renderViewport.width / 2);
-          canvas.width = halfW;
-          canvas.height = renderViewport.height;
-
-          if (pagePart === 'left_half') {
-            ctx.drawImage(offscreen, 0, 0, halfW, renderViewport.height, 0, 0, halfW, renderViewport.height);
-          } else {
-            ctx.drawImage(offscreen, halfW, 0, renderViewport.width - halfW, renderViewport.height, 0, 0, halfW, renderViewport.height);
-          }
-        } else {
-          canvas.width = renderViewport.width;
-          canvas.height = renderViewport.height;
-          const renderContext = {
-            canvasContext: ctx,
-            viewport: renderViewport,
-          };
-          const renderTask = page.render(renderContext);
-          renderTaskRef.current = renderTask;
-          await renderTask.promise;
-        }
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+        canvas.width = rotated.width;
+        canvas.height = rotated.height;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+        ctx.drawImage(rotated, 0, 0);
 
         if (active) {
+          setPlacement({
+            w: (placedWMm / cellWidthMm) * 100,
+            h: (placedHMm / cellHeightMm) * 100,
+          });
           setLoading(false);
         }
       } catch (err: any) {
@@ -140,16 +201,8 @@ const PDFPageThumbnail: React.FC<PDFPageThumbnailProps> = ({
     };
   }, [pdfDocument, pageIndex, pagePart, rotation, cellWidthMm, cellHeightMm, settings]);
 
-  // Compute percentage of page relative to cell dimensions
-  let scale = 1;
-  // Estimate aspect ratio dimensions
-  if (settings.scaleMode === 'fit') {
-    // scale is proportional to cell
-    scale = 1;
-  }
-
   return (
-    <div className="relative w-full h-full flex items-center justify-center bg-neutral-100 overflow-hidden select-none">
+    <div className="relative w-full h-full flex items-center justify-center overflow-hidden bg-white select-none">
       {loading && (
         <div className="absolute inset-0 flex items-center justify-center bg-neutral-50/80 z-10">
           <RefreshCw className="w-4 h-4 animate-spin text-neutral-400" />
@@ -160,17 +213,11 @@ const PDFPageThumbnail: React.FC<PDFPageThumbnailProps> = ({
       ) : (
         <canvas
           ref={canvasRef}
-          className={`shadow-2xs bg-white block transition-all ${
-            settings.scaleMode === 'fill'
-              ? 'w-full h-full object-cover'
-              : settings.scaleMode === 'fit'
-              ? 'max-w-full max-h-full object-contain'
-              : 'object-contain'
-          }`}
+          className="block bg-white shadow-2xs"
           style={
-            settings.scaleMode === 'custom'
-              ? { transform: `scale(${settings.customScale / 100})`, transformOrigin: 'center' }
-              : undefined
+            placement
+              ? { width: `${placement.w}%`, height: `${placement.h}%` }
+              : { visibility: 'hidden' }
           }
         />
       )}
@@ -263,29 +310,31 @@ export const ImpositionPreview: React.FC<ImpositionPreviewProps> = ({
 
   const hasFlipPair = Boolean(pairedSheet);
 
-  // Margins in percentage for visual guide
-  const isBack = activeSheet.side === 'back';
-  const effMarginL = (isBack && settings.duplexMode !== 'short_edge') ? settings.marginRight : settings.marginLeft;
-  const effMarginR = (isBack && settings.duplexMode !== 'short_edge') ? settings.marginLeft : settings.marginRight;
-  const effMarginT = (isBack && settings.duplexMode === 'short_edge') ? settings.marginBottom : settings.marginTop;
-  const effMarginB = (isBack && settings.duplexMode === 'short_edge') ? settings.marginTop : settings.marginBottom;
+  // Margins in percentage for the visual guide. The back face is mirrored on
+  // the same physical turn axis the planner uses (isBackSideHorizontallyMirrored),
+  // which depends on the sheet orientation, not only on the duplex mode.
+  const mirrorBack = isBackSideHorizontallyMirrored(settings);
+  const resolveMargins = (side: 'front' | 'back' | 'single' | undefined) => {
+    if (side !== 'back') {
+      return { l: settings.marginLeft, r: settings.marginRight, t: settings.marginTop, b: settings.marginBottom };
+    }
+    return mirrorBack
+      ? { l: settings.marginRight, r: settings.marginLeft, t: settings.marginTop, b: settings.marginBottom }
+      : { l: settings.marginLeft, r: settings.marginRight, t: settings.marginBottom, b: settings.marginTop };
+  };
 
-  const marginLPercent = (effMarginL / sheetW) * 100;
-  const marginRPercent = (effMarginR / sheetW) * 100;
-  const marginTPercent = (effMarginT / sheetH) * 100;
-  const marginBPercent = (effMarginB / sheetH) * 100;
+  const activeMargins = resolveMargins(activeSheet.side);
+  const marginLPercent = (activeMargins.l / sheetW) * 100;
+  const marginRPercent = (activeMargins.r / sheetW) * 100;
+  const marginTPercent = (activeMargins.t / sheetH) * 100;
+  const marginBPercent = (activeMargins.b / sheetH) * 100;
 
   // Paired sheet margins for Light Table overlay
-  const isPairedBack = pairedSheet?.side === 'back';
-  const pairedMarginL = (isPairedBack && settings.duplexMode !== 'short_edge') ? settings.marginRight : settings.marginLeft;
-  const pairedMarginR = (isPairedBack && settings.duplexMode !== 'short_edge') ? settings.marginLeft : settings.marginRight;
-  const pairedMarginT = (isPairedBack && settings.duplexMode === 'short_edge') ? settings.marginBottom : settings.marginTop;
-  const pairedMarginB = (isPairedBack && settings.duplexMode === 'short_edge') ? settings.marginTop : settings.marginBottom;
-
-  const pairedMarginLPercent = (pairedMarginL / sheetW) * 100;
-  const pairedMarginRPercent = (pairedMarginR / sheetW) * 100;
-  const pairedMarginTPercent = (pairedMarginT / sheetH) * 100;
-  const pairedMarginBPercent = (pairedMarginB / sheetH) * 100;
+  const pairedMargins = resolveMargins(pairedSheet?.side);
+  const pairedMarginLPercent = (pairedMargins.l / sheetW) * 100;
+  const pairedMarginRPercent = (pairedMargins.r / sheetW) * 100;
+  const pairedMarginTPercent = (pairedMargins.t / sheetH) * 100;
+  const pairedMarginBPercent = (pairedMargins.b / sheetH) * 100;
 
   const nextSheet = () => {
     if (currentSheetIdx < plan.length - 1) {
@@ -594,7 +643,7 @@ export const ImpositionPreview: React.FC<ImpositionPreviewProps> = ({
               <div
                 className="absolute inset-0 pointer-events-none z-20 overflow-hidden"
                 style={{
-                  transform: settings.duplexMode === 'short_edge' ? 'scaleY(-1)' : 'scaleX(-1)',
+                  transform: mirrorBack ? 'scaleX(-1)' : 'scaleY(-1)',
                   transformOrigin: 'center center',
                 }}
               >
@@ -649,7 +698,7 @@ export const ImpositionPreview: React.FC<ImpositionPreviewProps> = ({
                       <div
                         className="absolute bottom-1.5 left-1.5 bg-amber-900/90 text-amber-100 text-[8.5px] font-mono px-1.5 py-0.5 rounded-xs pointer-events-none z-30 flex items-center gap-1 shadow-sm backdrop-blur-xs select-none border border-amber-600/40"
                         style={{
-                          transform: settings.duplexMode === 'short_edge' ? 'scaleY(-1)' : 'scaleX(-1)',
+                          transform: mirrorBack ? 'scaleX(-1)' : 'scaleY(-1)',
                         }}
                       >
                         <span className="font-bold">
@@ -760,33 +809,45 @@ export const ImpositionPreview: React.FC<ImpositionPreviewProps> = ({
               );
             })}
 
-            {/* Crop Marks (Marcas de Corte) */}
-            {settings.drawCropMarks && activeSheet.cells.map((cell, idx) => {
-              const cellLeft = (cell.x / sheetW) * 100;
-              const cellTop = (cell.y / sheetH) * 100;
-              const cellWPercent = (cell.width / sheetW) * 100;
-              const cellHPercent = (cell.height / sheetH) * 100;
+            {/* Crop Marks (Marcas de Corte) — geometry mirrors pdfGenerator:
+                offset outside the trim by `bleed`, length `cropMarkLength` (mm). */}
+            {settings.drawCropMarks && (
+              <div className="absolute inset-0 pointer-events-none z-30 overflow-hidden">
+                {activeSheet.cells.map((cell, idx) => {
+                  const cellLeft = (cell.x / sheetW) * 100;
+                  const cellTop = (cell.y / sheetH) * 100;
+                  const cellRight = ((cell.x + cell.width) / sheetW) * 100;
+                  const cellBottom = ((cell.y + cell.height) / sheetH) * 100;
 
-              return (
-                <div key={`crop-marks-${idx}`} className="absolute pointer-events-none inset-0 z-30">
-                  {/* Top-Left */}
-                  <div className="absolute w-[10px] h-[0.75px] bg-neutral-700" style={{ left: `calc(${cellLeft}% - 8px)`, top: `${cellTop}%` }} />
-                  <div className="absolute w-[0.75px] h-[10px] bg-neutral-700" style={{ left: `${cellLeft}%`, top: `calc(${cellTop}% - 8px)` }} />
-                  
-                  {/* Top-Right */}
-                  <div className="absolute w-[10px] h-[0.75px] bg-neutral-700" style={{ left: `calc(${cellLeft + cellWPercent}% - 2px)`, top: `${cellTop}%` }} />
-                  <div className="absolute w-[0.75px] h-[10px] bg-neutral-700" style={{ left: `${cellLeft + cellWPercent}%`, top: `calc(${cellTop}% - 8px)` }} />
-                  
-                  {/* Bottom-Left */}
-                  <div className="absolute w-[10px] h-[0.75px] bg-neutral-700" style={{ left: `calc(${cellLeft}% - 8px)`, top: `${cellTop + cellHPercent}%` }} />
-                  <div className="absolute w-[0.75px] h-[10px] bg-neutral-700" style={{ left: `${cellLeft}%`, top: `calc(${cellTop + cellHPercent}% - 2px)` }} />
-                  
-                  {/* Bottom-Right */}
-                  <div className="absolute w-[10px] h-[0.75px] bg-neutral-700" style={{ left: `calc(${cellLeft + cellWPercent}% - 2px)`, top: `${cellTop + cellHPercent}%` }} />
-                  <div className="absolute w-[0.75px] h-[10px] bg-neutral-700" style={{ left: `${cellLeft + cellWPercent}%`, top: `calc(${cellTop + cellHPercent}% - 2px)` }} />
-                </div>
-              );
-            })}
+                  const bleedX = (settings.bleed / sheetW) * 100;
+                  const bleedY = (settings.bleed / sheetH) * 100;
+                  const lenX = (settings.cropMarkLength / sheetW) * 100;
+                  const lenY = (settings.cropMarkLength / sheetH) * 100;
+                  const hMark = 'absolute bg-neutral-800';
+                  const vMark = 'absolute bg-neutral-800';
+
+                  return (
+                    <div key={`crop-marks-${idx}`} className="absolute inset-0">
+                      {/* Top-Left */}
+                      <div className={vMark} style={{ left: `${cellLeft - bleedX}%`, top: `${cellTop - bleedY - lenY}%`, width: '1px', height: `${lenY}%` }} />
+                      <div className={hMark} style={{ left: `${cellLeft - bleedX - lenX}%`, top: `${cellTop - bleedY}%`, width: `${lenX}%`, height: '1px' }} />
+
+                      {/* Top-Right */}
+                      <div className={vMark} style={{ left: `${cellRight + bleedX}%`, top: `${cellTop - bleedY - lenY}%`, width: '1px', height: `${lenY}%` }} />
+                      <div className={hMark} style={{ left: `${cellRight + bleedX}%`, top: `${cellTop - bleedY}%`, width: `${lenX}%`, height: '1px' }} />
+
+                      {/* Bottom-Left */}
+                      <div className={vMark} style={{ left: `${cellLeft - bleedX}%`, top: `${cellBottom + bleedY}%`, width: '1px', height: `${lenY}%` }} />
+                      <div className={hMark} style={{ left: `${cellLeft - bleedX - lenX}%`, top: `${cellBottom + bleedY}%`, width: `${lenX}%`, height: '1px' }} />
+
+                      {/* Bottom-Right */}
+                      <div className={vMark} style={{ left: `${cellRight + bleedX}%`, top: `${cellBottom + bleedY}%`, width: '1px', height: `${lenY}%` }} />
+                      <div className={hMark} style={{ left: `${cellRight + bleedX}%`, top: `${cellBottom + bleedY}%`, width: `${lenX}%`, height: '1px' }} />
+                    </div>
+                  );
+                })}
+              </div>
+            )}
 
             {/* Booklet Spine / Fold & Cut Guides */}
             {settings.layoutMode === 'booklet' && (
@@ -919,7 +980,7 @@ export const ImpositionPreview: React.FC<ImpositionPreviewProps> = ({
                             rotation={0}
                             cellWidthMm={40}
                             cellHeightMm={55}
-                            settings={settings}
+                            settings={{ ...settings, scaleMode: 'fit', customScale: 100 }}
                           />
                         </div>
                       ) : (
