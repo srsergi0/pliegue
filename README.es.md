@@ -53,9 +53,12 @@ Descarga la versión más reciente lista para usar desde **[GitHub Releases](htt
   - Repetición de la misma página (*Step and Repeat*) para tarjetas de presentación, etiquetas adhesivas o flyers.
   - Ordenación consecutiva por filas o columnas.
   - Modo **Corte y Apilado (*Cut & Stack*)** para corte veloz directo a guillotina sin barajar.
-- 🔦 **Mesa de Luz / Modo Trasluz (Flip Cara)**:
-  - Inspección translúcida en tiempo real para verificar el registro exacto entre la cara frontal (tiro) y el dorso (retiro).
-  - Volteo dinámico de pliego para comprobar alineación de medianiles y márgenes de corte.
+- 🧭 **Flujo de Imposición Enfocado**:
+  - Panel de control lineal en 5 pasos plegables: Producto, Pliego, Distribución, Impresión y Acabado.
+  - Resumen del trabajo con chips que saltan a cada paso y barra de estado inferior con totales de producción e info del pliego actual.
+  - Navegación de pliegos coloreada cara/reverso y panel ocultable con las páginas desactivadas.
+- 🌐 **Interfaz Multilingüe**:
+  - Interfaz completa en español, inglés, japonés y chino simplificado, con detección del idioma del sistema al primer arranque.
 - ✂️ **Marcas de Corte y Sangrado (*Bleed*)**:
   - Marcas de corte vectoriales en esquinas y medianiles internos.
   - Longitud, grosor, sangrado simétrico y separación de medianiles totalmente personalizables.

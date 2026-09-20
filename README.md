@@ -53,9 +53,12 @@ Download the latest production release ready to run from **[GitHub Releases](htt
   - Single-page repeat (*Step & Repeat*) for business cards, adhesive labels, or flyers.
   - Consecutive page sequencing by rows or columns.
   - **Cut & Stack** mode for rapid guillotine trimming with zero manual collating.
-- 🔦 **Light Table / Backlight Mode (Flip & Overlay)**:
-  - Real-time translucent overlay to inspect sheet-to-sheet registration between front (work) and back (turn).
-  - Rapid side-flip to verify gutters, trim lines, and margins.
+- 🧭 **Focused Imposition Workflow**:
+  - Linear control panel in 5 collapsible steps: Product, Sheet, Distribution, Printing, Finishing.
+  - Job summary chips that jump to any step, plus a bottom status bar with production totals and the current sheet info.
+  - Front/back colour-coded sheet navigation and a hideable panel listing the disabled pages.
+- 🌐 **Multilingual Interface**:
+  - Full UI in Spanish, English, Japanese and Simplified Chinese, following the system language on first launch.
 - ✂️ **Vector Printer Marks & Bleed Control**:
   - Crisp vector crop marks at outer corners and inter-page gutters.
   - Configurable mark length, stroke width, symmetric bleed, and page spacing.
